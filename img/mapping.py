@@ -2,13 +2,13 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 import math
+import os
 
 def wavefront(wave, goal):
     queue = [goal]
 
     while queue:
         current_node = queue.pop(0)
-        print(current_node)
         current_value = wave[current_node[0]][current_node[1]]
 
         neighbor_indexes = [(current_node[0]-1,current_node[1]-1),  (current_node[0],current_node[1]-1),    (current_node[0]+1,current_node[1]-1),
@@ -20,7 +20,7 @@ def wavefront(wave, goal):
             j = neighbor_index[1]
             neighbor_value = wave[i][j]
 
-            print(neighbor_index, wave[i][j])
+            # print(neighbor_index, wave[i][j])
 
             if neighbor_value == 0:
                 continue
@@ -29,11 +29,10 @@ def wavefront(wave, goal):
                 queue.append(neighbor_index)
             elif current_value + 1 < neighbor_value:
                 wave[i,j] = current_value + 1
-        # break
+
     return 255*wave/(np.max(wave))
 
-
-img = cv.imread('/home/vangasse/PMR_ws/src/PMR/img/maze.png',0)
+img = cv.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maze.png'),0)
 
 ret,thresh = cv.threshold(img,127,255,cv.THRESH_BINARY_INV)
 
