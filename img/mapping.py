@@ -24,13 +24,13 @@ def wavefront(wave, goal):
 
             if neighbor_value == 0:
                 continue
-            if neighbor_value == 1:
+            if neighbor_value == 1 and not (i,j) == goal:
                 wave[i,j] = current_value + 1
                 queue.append(neighbor_index)
             elif current_value + 1 < neighbor_value:
                 wave[i,j] = current_value + 1
 
-    return 255*wave/(np.max(wave))
+    return wave
 
 img = cv.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maze.png'),0)
 
@@ -60,10 +60,16 @@ contours, hierarchy = cv.findContours(final, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPL
 
 wave = wavefront(final/255, (70,440))
 
+# print(np.max(wave))
+
 plt.subplot(131),plt.imshow(img,'gray',vmin=0,vmax=255),plt.title('Original')
 plt.xticks([]), plt.yticks([])
 plt.subplot(132),plt.imshow(final,'gray',vmin=0,vmax=255),plt.title('Treated Map')
 plt.xticks([]), plt.yticks([])
-plt.subplot(133),plt.imshow(wave,'gray',vmin=0,vmax=255),plt.title('Wavefront')
+plt.subplot(133),plt.imshow(wave,'gray'),plt.title('Wavefront')
 plt.xticks([]), plt.yticks([])
 plt.show()
+
+
+
+np.save('wave.npy', wave)
