@@ -11,9 +11,10 @@ def wavefront(wave, goal):
         current_node = queue.pop(0)
         current_value = wave[current_node[0]][current_node[1]]
 
-        neighbor_indexes = [(current_node[0]-1,current_node[1]-1),  (current_node[0],current_node[1]-1),    (current_node[0]+1,current_node[1]-1),
-                            (current_node[0]-1,current_node[1]),                                            (current_node[0]+1,current_node[1]),
-                            (current_node[0]-1,current_node[1]+1),  (current_node[0],current_node[1]+1),    (current_node[0]+1,current_node[1]+1) ]
+        neighbor_indexes = [(current_node[0],current_node[1]-1),
+                            (current_node[0]-1,current_node[1]),
+                            (current_node[0]+1,current_node[1]),
+                            (current_node[0],current_node[1]+1)]
 
         for neighbor_index in neighbor_indexes:
             i = neighbor_index[0]
@@ -53,12 +54,14 @@ kernel_size = math.ceil(robot_diameter/pixel_size)
 
 kernel = np.ones((kernel_size,kernel_size), np.uint8)
 
-final = cv.erode(croped, kernel)
+eroded = cv.erode(croped, kernel)
+
+final = cv.rotate(eroded, cv.ROTATE_90_COUNTERCLOCKWISE)
 
 contours, hierarchy = cv.findContours(final, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 # cv.drawContours(blur, contours, -1, (0,255,0), 3)
 
-wave = wavefront(final/255, (70,440))
+wave = wavefront(final/255, (525,785))
 
 # print(np.max(wave))
 
@@ -70,6 +73,4 @@ plt.subplot(133),plt.imshow(wave,'gray'),plt.title('Wavefront')
 plt.xticks([]), plt.yticks([])
 plt.show()
 
-
-
-np.save('wave.npy', wave)
+np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wave.npy'), wave)
