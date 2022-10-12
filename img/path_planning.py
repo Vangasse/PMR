@@ -5,9 +5,10 @@ import math
 import os
 
 def getStep(img, position):
-    neighbor_indexes = [(position[0]-1,position[1]-1),  (position[0],position[1]-1),    (position[0]+1,position[1]-1),
-                        (position[0]-1,position[1]),                                    (position[0]+1,position[1]),
-                        (position[0]-1,position[1]+1),  (position[0],position[1]+1),    (position[0]+1,position[1]+1) ]
+    neighbor_indexes = [(position[0],position[1]-1),
+                        (position[0]-1,position[1]),
+                        (position[0]+1,position[1]),
+                        (position[0],position[1]+1)]
     
     neghbor_values = np.array([])
     for neighbor_index in neighbor_indexes:
@@ -24,12 +25,10 @@ def getStep(img, position):
 img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wave.npy'))
 
 normal = 255*img/np.max(img)
-# print(np.max(normal))
+
 color = cv.cvtColor(np.uint8(normal),cv.COLOR_GRAY2RGB)
 
-# print(np.max(img))
-
-position = (790,130)
+position = (110,90)
 while True:
     x, y = getStep(img, position)
 
