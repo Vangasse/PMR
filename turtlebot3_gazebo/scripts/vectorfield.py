@@ -57,8 +57,9 @@ class Turtlebot3_Navigator(Node):
         self.objective_curve.header.frame_id = "odom"
         self.objective_curve.header.stamp = self.get_clock().now().to_msg()
         
-        self.trail_step = PoseStamped()
         self.trail = Path()
+        self.trail.header.frame_id = "odom"
+        self.trail.header.stamp = self.get_clock().now().to_msg()
 
         # Cria curva
         theta = np.arange(0, 2*np.pi, 0.01)
@@ -89,16 +90,20 @@ class Turtlebot3_Navigator(Node):
 
         self.move_turtle()
 
+        self.publisher_trail.publish(self.trail)
+        self.publisher_objective.publish(self.objective_curve)
+
     def update_pose(self, msg):
-        self.position = msg.pose.pose.position
-        self.orientation = msg.pose.pose.orientation
+        self.trail_step = PoseStamped()
+        self.trail_step.header.frame_id = "odom"
+        self.trail_step.header.stamp = self.get_clock().now().to_msg()
 
         self.trail_step.pose.position = self.position
         self.trail_step.pose.orientation = self.orientation
         self.trail.poses.append(self.trail_step)
 
-        self.publisher_trail.publish(self.trail)
-        self.publisher_objective.publish(self.objective_curve)
+        self.position = msg.pose.pose.position
+        self.orientation = msg.pose.pose.orientation
  
     def euler_from_quaternion(self, orientation):
             """
@@ -126,8 +131,6 @@ class Turtlebot3_Navigator(Node):
             yaw_z = math.atan2(t3, t4)
         
             return roll_x, pitch_y, yaw_z # in radians
-
-
 
     ###################################################################################################
     # Encontra ponto mais próximo dentro do trajeto
