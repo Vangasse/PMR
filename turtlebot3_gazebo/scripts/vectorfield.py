@@ -79,9 +79,6 @@ class Turtlebot3_Navigator(Node):
 
             self.objective_curve.poses.append(self.objective_step)
 
-        print(self.objective_curve.poses[0].pose, self.C[0][0], self.C[1][0])
-        print(self.objective_curve.poses[100].pose, self.C[0][100], self.C[1][100])
-
     ###################################################################################################
     #Callback da Pose toda vez que é publicada.
     def odom_callback(self, msg):
