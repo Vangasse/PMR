@@ -36,9 +36,26 @@ while True:
         break
 
     position = (x, y)
+
     color[x, y, 0] = 255
     color[x, y, 1] = 0
     color[x, y, 2] = 0
+    
+    color[x-1, y, 0] = 255
+    color[x-1, y, 1] = 0
+    color[x-1, y, 2] = 0
+    
+    color[x+1, y, 0] = 255
+    color[x+1, y, 1] = 0
+    color[x+1, y, 2] = 0
+
+    color[x, y+1, 0] = 255
+    color[x, y+1, 1] = 0
+    color[x, y+1, 2] = 0
+
+    color[x, y-1, 0] = 255
+    color[x, y-1, 1] = 0
+    color[x, y-1, 2] = 0
 
 plt.subplot(121),plt.imshow(img,'gray'),plt.title('Original')
 plt.xticks([]), plt.yticks([])
