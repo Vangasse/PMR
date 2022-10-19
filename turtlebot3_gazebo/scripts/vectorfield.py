@@ -19,14 +19,13 @@ from distutils.log import debug
 import rclpy
 import numpy as np
 import math
-from scipy.linalg import norm
 
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist, Point, Quaternion
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Path, Odometry
-from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import PoseStamped, Pose, PoseStamped
 from rclpy.qos import QoSProfile
 from rclpy.qos import qos_profile_sensor_data
 
@@ -37,8 +36,10 @@ class Turtlebot3_Navigator(Node):
     def __init__(self):
         super().__init__('turtlebot3_navigator')
         qos = QoSProfile(depth=10)
-        self.velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
         self.publisher_odom_ = self.create_publisher(Odometry, 'odom', 10)
+        self.publisher_trail = self.create_publisher(Path, 'trail', 10)
+        self.publisher_objective = self.create_publisher(Path, 'objective', 10)
 
         self.odom_subscription = self.create_subscription(
             Odometry,
@@ -47,8 +48,18 @@ class Turtlebot3_Navigator(Node):
             qos)
 
         self.position = Point()
-        self.pose = Point()
         self.orientation = Quaternion()
+        self.velocity = 0.0
+        self.k = .1
+        self.d = .1
+
+        self.objective_curve = Path()
+        self.objective_curve.header.frame_id = "odom"
+        self.objective_curve.header.stamp = self.get_clock().now().to_msg()
+        
+        self.trail = Path()
+        self.trail.header.frame_id = "odom"
+        self.trail.header.stamp = self.get_clock().now().to_msg()
 
         # Cria curva
         theta = np.arange(0, 2*np.pi, 0.01)
@@ -56,22 +67,41 @@ class Turtlebot3_Navigator(Node):
         self.C = [[],[]]
 
         for theta1 in theta:
-            self.C[0].append(2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1) + 5.5)
-            self.C[1].append(2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1) + 5.5)
+            self.C[0].append(2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1))
+            self.C[1].append(2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1))
+        
+            self.objective_step = PoseStamped()
+            self.objective_step.header.frame_id = "odom"
+            self.objective_step.header.stamp = self.get_clock().now().to_msg()
+
+            self.objective_step.pose.position.x = 2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1)
+            self.objective_step.pose.position.y = 2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1)
+
+            self.objective_curve.poses.append(self.objective_step)
 
     ###################################################################################################
     #Callback da Pose toda vez que é publicada.
     def odom_callback(self, msg):
-        self.update_pose(msg)
+        self.update_state(msg)
         roll, pitch, self.yaw = self.euler_from_quaternion(self.orientation)
 
-        self.move_turtle()
+        self.control(self.C, self.position, self.velocity, self.yaw, self.d, self.k, .03, 3)
 
-    def update_pose(self, msg):
+        self.publisher_trail.publish(self.trail)
+        self.publisher_objective.publish(self.objective_curve)
+
+    def update_state(self, msg):
+        self.trail_step = PoseStamped()
+        self.trail_step.header.frame_id = "odom"
+        self.trail_step.header.stamp = self.get_clock().now().to_msg()
+
+        self.trail_step.pose.position = self.position
+        self.trail_step.pose.orientation = self.orientation
+        self.trail.poses.append(self.trail_step)
+
         self.position = msg.pose.pose.position
-        self.pose.x = round(self.position.x, 4)
-        self.pose.y = round(self.position.y, 4)
         self.orientation = msg.pose.pose.orientation
+        self.velocity = msg.twist.twist.linear.x
  
     def euler_from_quaternion(self, orientation):
             """
@@ -100,122 +130,61 @@ class Turtlebot3_Navigator(Node):
         
             return roll_x, pitch_y, yaw_z # in radians
 
-
-
     ###################################################################################################
     # Encontra ponto mais próximo dentro do trajeto
-    def pontomaisprox(self,dxatual,dyatual,C):
+    def closest_point(self, position, dx, dy, C):
         d = [] # Distâncias
         
         for i in list(range(0,len(C[1]))):
-            d.append(norm([self.pose.x + dxatual - C[0][i] , self.pose.y + dyatual - C[1][i]]))
+            d.append(np.linalg.norm([position.x + dx - C[0][i] , position.y + dy - C[1][i]]))
         
         dmin = min(d) # Distância mínima
         j = d.index(min(d)) # Indíce correspondente à distância mínima
         
         p_star = [C[0][j],C[1][j]] # Ponto mais próximo
         
-        norma = norm(np.array([p_star[0] - (self.pose.x + dxatual) ,p_star[1] - (self.pose.y + dyatual)])) # Norma da distância p p*
+        norma = np.linalg.norm(np.array([p_star[0] - (position.x + dx) ,p_star[1] - (position.y + dy)])) # Norma da distância p p*
         
-        N = [(p_star[0] - (self.pose.x + dxatual))/norma,(p_star[1] - (self.pose.y + dyatual))/norma] # Vetor normal
+        N = [(p_star[0] - (position.x + dx))/norma,(p_star[1] - (position.y + dy))/norma] # Vetor normal
         
         if j == (len(C[1])-1):
             T = [C[0][0] - C[0][j] , C[1][0] - C[1][j]] # Caso especial
         else:
             T = [C[0][j+1] - C[0][j] , C[1][j+1] - C[1][j]] 
 
-        T = np.array(T)/norm(T) #Vetor tangencial
-        print(p_star[0]-self.pose.x)
-        print(p_star[1]-self.pose.y)
+        T = np.array(T)/np.linalg.norm(T)
         return [N,T,dmin]
-
 
     ###################################################################################################
     # Composição Vetor Normal e Tangente para Obter Velocidade Desejada no Estado
-    def composicao_de_vetores (self,N,T,beta,dmin):
+    def vector_composition(self, N, T, beta, dmin):
         
         G = (2/np.pi)*np.arctan(beta*dmin)
         H = np.sqrt(1-G**2)
         
         return 0.7*(G*np.array(N)+H*np.array(T))
 
-
-
-
-
-
     ###################################################################################################
     # Lei de Controle
-    def control(self,C):
+    def control(self, C, position, velocity, orientation, d, k, dt, beta):
+
+        current_dx = velocity*dt*np.cos(orientation)
+        current_dy = velocity*dt*np.sin(orientation)
         
-        pmed = np.array([self.pose.x + 0.1, self.pose.y + 0.1]) # Posição Medida (Simula Perturbações)
+        [N, T, dmin] = self.closest_point(position, current_dx, current_dy, C)
+        dx, dy = self.vector_composition(N, T, beta, dmin)
 
-        deslocamento_atual = np.array([self.v*np.cos(self.yaw)*self.dt, self.v*np.sin(self.yaw)*self.dt])
+        sin = np.sin(orientation)
+        cos = np.cos(orientation)
+        v = cos*dx + sin*dy
+        w = (1/d)*(-sin*dx + cos*dy)
+
+        cmd_vel_pub = Twist()
+
+        cmd_vel_pub.linear.x = v
+        cmd_vel_pub.angular.z = w
         
-        [N,T,dmin] = self.pontomaisprox(deslocamento_atual[0],deslocamento_atual[1],C)
-        velocidade_desejada = self.composicao_de_vetores (N,T,self.beta,dmin)
-
-        [N,T,dmin] = self.pontomaisprox(deslocamento_atual[0],deslocamento_atual[1],C)
-        velocidade_desejada_futura = self.composicao_de_vetores (N,T,self.beta,dmin)
-
-        derivada_velocidade = (velocidade_desejada_futura - velocidade_desejada)/self.dt
-
-        w_max = 1
-        k = 2 
-
-        # Matriz
-        M = np.array([[self.v*np.cos(self.yaw),self.v*np.sin(self.yaw)],
-                      [-np.sin(self.yaw),np.cos(self.yaw)]])
-
-        controlador_prop = -k*np.array([self.v*np.cos(self.yaw)-velocidade_desejada[0],self.v*np.sin(self.yaw)-velocidade_desejada[1]])
-
-        acc_desired = [derivada_velocidade[0]+controlador_prop[0],derivada_velocidade[1]+controlador_prop[1]]
-
-
-        [a,w] = np.matmul(M/self.v, acc_desired)
-        
-        if w > w_max:
-            w = w_max
-        elif w < -w_max:
-            w = -w_max
-        
-        v = self.v + a*self.dt # Método de Euler
-        
-
-
-        #print(f"velocidade linear: {v}\nvelocidade angular: {w}\n")
-
-        return [v,w]
-
-
-    ###################################################################################################
-    # Move Tartaruga Função Principal
-    def move_turtle(self):
-        vel = Twist()
-
-        # Velocidades Iniciais
-        self.v = 1
-        self.w = 0.1
-
-        # Parâmetros
-        self.dt = 0.03
-        self.beta = 3
-
-        [self.v,self.w] = self.control(self.C)
-
-        # Linear velocity in the x-axis.
-        vel.linear.x = self.v
-        vel.linear.y = 0.0
-        vel.linear.z = 0.0
-
-        # Angular velocity in the z-axis.
-        vel.angular.x = 0.0
-        vel.angular.y = 0.0
-        vel.angular.z = self.w
-
-        # Publishing our vel_msg
-        self.velocity_publisher.publish(vel)
-
+        self.publisher_.publish(cmd_vel_pub)
 
 
 def main(args=None):
