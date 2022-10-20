@@ -52,6 +52,8 @@ class Turtlebot3_Navigator(Node):
         self.velocity = 0.0
         self.k = .1
         self.d = .1
+        self.v_lim = 1
+        self.w_lim = np.pi/6
 
         self.objective_curve = Path()
         self.objective_curve.header.frame_id = "odom"
@@ -66,16 +68,22 @@ class Turtlebot3_Navigator(Node):
 
         self.C = [[],[]]
 
+        R = 3
+        r = 1
+
         for theta1 in theta:
-            self.C[0].append(2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1))
-            self.C[1].append(2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1))
+            # self.C[0].append(2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1))
+            # self.C[1].append(2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1))
+
+            self.C[0].append(3*np.sin(theta1) + np.sin(10*theta1))
+            self.C[1].append(3*np.cos(theta1) + np.cos(10*theta1))
         
             self.objective_step = PoseStamped()
             self.objective_step.header.frame_id = "odom"
             self.objective_step.header.stamp = self.get_clock().now().to_msg()
 
-            self.objective_step.pose.position.x = 2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1)
-            self.objective_step.pose.position.y = 2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1)
+            self.objective_step.pose.position.x = self.C[0][-1]
+            self.objective_step.pose.position.y = self.C[1][-1]
 
             self.objective_curve.poses.append(self.objective_step)
 
@@ -181,8 +189,15 @@ class Turtlebot3_Navigator(Node):
 
         cmd_vel_pub = Twist()
 
-        cmd_vel_pub.linear.x = v
-        cmd_vel_pub.angular.z = w
+        if v < self.v_lim:
+            cmd_vel_pub.linear.x = v
+        else:
+            cmd_vel_pub.linear.x = self.v_lim
+        
+        if w < self.w_lim:
+            cmd_vel_pub.angular.z = w
+        else:
+            cmd_vel_pub.angular.z = self.w_lim
         
         self.publisher_.publish(cmd_vel_pub)
 
