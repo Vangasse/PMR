@@ -16,7 +16,7 @@
 
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose frame=''>0.319654 -0.235002 9.29441 0 1.5138 0.009599</pose>
+        <pose frame=''>0 0 9 0 1.57079632679 0</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -51,7 +51,7 @@
     </model>
      
     <include>
-      <pose>0.0 -2 0.01 0.0 0.0 1.57079632679</pose>
+      <pose>0.0 -2.5 0.01 0.0 0.0 1.57079632679</pose>
       <uri>model://turtlebot3_waffle</uri>
     </include>
 
