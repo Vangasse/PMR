@@ -8,6 +8,8 @@ from nav_msgs.msg import Odometry
 import math
 import numpy as np
 import sys
+import time
+import pandas as pd
 
 class ARP_ControllerNode(Node):
     
@@ -28,14 +30,44 @@ class ARP_ControllerNode(Node):
         self.h = 0.1        
         self.obstacle_points = {}
         self.obstacle_distances = {}
+        self.time = []
+        self.U = []
+        self.Uatt = []
+        self.Urep = []
+        self.gU = []
+        self.gUatt = []
+        self.gUrep = []
         # Parâmetros de ajuste
-        self.min_distance_to_the_obstacle = 1.0
+        self.min_distance_to_the_obstacle = 2.0
         self.min_distance_to_the_goal = 5.0
         self.zeta = 1.0
         self.alpha = 0.1
         self.eta = 0.1
-        self.epsilon = 0.5     
+        self.epsilon = 0.2   
         self.run(int(eval(sys.argv[3])))
+    
+    def run(self, option):
+        time.sleep(2)
+        if(option == 1):
+            self.conic()
+            self.writeData('conic.csv')
+        elif(option == 2):
+            self.quadratic()
+            self.writeData('quadratic.csv')
+        elif(option == 3):            
+            self.conic_and_quadratic()
+            self.writeData('conic_and_quadratic.csv')
+        else:
+            print("Error")
+
+    def writeData(self, name):
+        
+        data = [self.time, self.U, self.Uatt, self.Urep, self.gU, self.gUatt, self.gUrep]
+
+        df = pd.DataFrame(data).transpose()
+        df.columns = ['Time', 'U', 'Uatt', 'Urep', 'gU', 'gUatt', 'gUrep']
+        df.to_csv(name, sep='\t', index=False)
+        
     
     def scan_callback(self, msg:LaserScan):
 
@@ -138,14 +170,11 @@ class ARP_ControllerNode(Node):
         
             return roll_x, pitch_y, yaw_z # in radians
 
-    def distance_to_the_goal(self):
-        return math.sqrt(pow(self.desired_position.x - self.current_position.x, 2) + pow(self.desired_position.y - self.current_position.y, 2))
-
-    # def conic_function(self):
-    #     return self.zeta * self.distance_to_the_goal()
-
     def distance_to_the_goal(self, qx, qy, qx_goal, qy_goal):
         return math.sqrt(pow(qx_goal- qx, 2) + pow(qy_goal - qy, 2))
+
+    def conic_function(self, qx, qy, qx_goal, qy_goal):
+        return self.distance_to_the_goal(qx, qy, qx_goal, qy_goal)    
     
     def conic_gradient(self, qx, qy, qx_goal, qy_goal):
         d = self.distance_to_the_goal(qx, qy, qx_goal, qy_goal)
@@ -153,13 +182,17 @@ class ARP_ControllerNode(Node):
         gy = (self.zeta/d)*(qy - qy_goal) 
         return gx, gy
     
-    # def quadratic_function(self):
-    #     return (1/2)*(self.zeta * pow(self.distance_to_the_goal(), 2))
+    def quadratic_function(self, qx, qy, qx_goal, qy_goal):
+        return (1/2)*self.zeta * pow(self.distance_to_the_goal(qx, qy, qx_goal, qy_goal), 2)
     
     def quadratic_gradient(self, qx, qy, qx_goal, qy_goal):
         gx = self.zeta*(qx - qx_goal)
         gy = self.zeta*(qy - qy_goal)
         return gx, gy
+    
+    def conic_and_quadratic_function(self, qx, qy, qx_goal, qy_goal):
+        d = self.distance_to_the_goal(qx, qy, qx_goal, qy_goal)
+        return self.min_distance_to_the_goal*self.zeta*d - (1/2)*self.zeta*pow(self.min_distance_to_the_goal, 2)
     
     def conic_and_quadratic_gradient(self, qx, qy, qx_goal, qy_goal):
         d = self.distance_to_the_goal(qx, qy, qx_goal, qy_goal)
@@ -169,18 +202,24 @@ class ARP_ControllerNode(Node):
     
     def norm_gradient(self, x, y):
         return math.sqrt(pow(x, 2) + pow(y, 2))
+        
+    def r_function(self, min_d, d):
+        return (1/2)*self.eta*pow(((1/d)-(1/min_d)), 2)
     
-    def run(self, option):
+    def repulsive_function(self):
+        rU = 0.0
+        if('right' in self.obstacle_points and 'right' in self.obstacle_distances):
+            rU += self.r_function(self.min_distance_to_the_obstacle, self.obstacle_distances['right'])
+        if('front_right' in self.obstacle_points and 'front_right' in self.obstacle_distances):
+            rU += self.r_function(self.min_distance_to_the_obstacle, self.obstacle_distances['front_right'])
+        if('front' in self.obstacle_points and 'front' in self.obstacle_distances):
+            rU += self.r_function(self.min_distance_to_the_obstacle, self.obstacle_distances['front'])
+        if('front_left' in self.obstacle_points and 'front_left' in self.obstacle_distances):
+            rU += self.r_function(self.min_distance_to_the_obstacle, self.obstacle_distances['front_left'])
+        if('left' in self.obstacle_points and 'left' in self.obstacle_distances):
+            rU += self.r_function(self.min_distance_to_the_obstacle, self.obstacle_distances['left'])
+        return rU          
 
-        if(option == 1):
-            self.conic()
-        elif(option == 2):
-            self.quadratic()
-        elif(option == 3):
-            self.conic_and_quadratic()
-        else:
-            print("Error")
-    
     def r_gradient(self, min_d, d, qi, ci):
         return self.eta*((1/min_d)-(1/d))*(1/pow(d,2))*((qi-ci)/d)
         
@@ -210,18 +249,32 @@ class ARP_ControllerNode(Node):
         print("Conic Potential")
         self.zeta = 1.0
         self.alpha = 0.1
-        self.eta = 1.0
+        self.eta = 0.5
+        #self.epsilon = 1.0
        
         gx_att, gy_att = self.conic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
         gx_rep, gy_rep = self.repulsive_gradient()
 
         twist_msg = Twist()
-        while not self.norm_gradient(gx_att, gy_att) < self.epsilon:       
+        distance = 0.2
+        t = time.time()
+        while not self.distance_to_the_goal(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y) < distance:
+        #while not self.norm_gradient(gx_att, gy_att) < self.epsilon:
+        
             print('x: ', round(self.current_position.x, 5), 'y: ', round(self.current_position.y, 5))
-   
+            
+            fU_att = self.conic_function(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
+            fU_rep = self.repulsive_function()
+            gU = self.norm_gradient(gx_att + gx_rep, gy_att + gy_rep)
+            print('gU: ', gU, 'Uatt: ', fU_att, 'Urep: ', fU_rep, 'U: ', fU_att+fU_rep)
+
+            if(gU < self.epsilon):
+                print("Local Minimum")
+                break
+        
             ux = -self.alpha * (gx_att + gx_rep)
             uy = -self.alpha * (gy_att + gy_rep)
-     
+            
             v = ux*math.cos(self.current_orientation.z) + uy*math.sin(self.current_orientation.z)
             w = (1/self.h)*(-ux*math.sin(self.current_orientation.z) + uy*math.cos(self.current_orientation.z))
 
@@ -231,29 +284,48 @@ class ARP_ControllerNode(Node):
 
             gx_att, gy_att = self.conic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
             gx_rep, gy_rep = self.repulsive_gradient()
+
+            self.time.append(time.time() - t)
+            self.U.append(fU_att+fU_rep)
+            self.Uatt.append(fU_att)
+            self.Urep.append(fU_rep)
+            self.gU.append(gU)
+            self.gUatt.append(self.norm_gradient(gx_att, gy_att))
+            self.gUrep.append(self.norm_gradient(gx_rep, gy_rep))
+
             rclpy.spin_once(self, timeout_sec=1.0)
         
         twist_msg.linear.x = 0.0
         twist_msg.angular.z = 0.0
         self.cmd_vel_pub.publish(twist_msg)
-        print('Done 1!')
+        print('Done!')
 
 
     def quadratic(self):
         print("Quadratic Potential")
         self.zeta = 1.0
         self.alpha = 0.1
-        self.eta = 1.0
-                
+        self.eta = 0.5
+                        
         gx_att, gy_att = self.quadratic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
         gx_rep, gy_rep = self.repulsive_gradient()
 
         twist_msg = Twist()
+        t = time.time()
         while not self.norm_gradient(gx_att,gy_att) < self.epsilon:
             print('x: ', round(self.current_position.x, 5), 'y: ', round(self.current_position.y, 5))
 
-            ux = self.alpha * (-gx_att + gx_rep)
-            uy = self.alpha * (-gy_att + gy_rep)
+            fU_att = self.quadratic_function(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
+            fU_rep = self.repulsive_function()
+            gU = self.norm_gradient(gx_att + gx_rep, gy_att + gy_rep)
+            print('gU: ', gU, 'Uatt: ', fU_att, 'Urep: ', fU_rep, 'U: ', fU_att+fU_rep)
+
+            if(gU < self.epsilon):
+                print("Local Minimum")
+                break
+            
+            ux = -self.alpha * (gx_att + gx_rep)
+            uy = -self.alpha * (gy_att + gy_rep)
 
             v = ux*math.cos(self.current_orientation.z) + uy*math.sin(self.current_orientation.z)
             w = (1/self.h)*(-ux*math.sin(self.current_orientation.z) + uy*math.cos(self.current_orientation.z))
@@ -265,32 +337,47 @@ class ARP_ControllerNode(Node):
             gx_att, gy_att = self.quadratic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
             gx_rep, gy_rep = self.repulsive_gradient()
 
+            self.time.append(time.time() - t)
+            self.U.append(fU_att+fU_rep)
+            self.Uatt.append(fU_att)
+            self.Urep.append(fU_rep)
+            self.gU.append(gU)
+            self.gUatt.append(self.norm_gradient(gx_att, gy_att))
+            self.gUrep.append(self.norm_gradient(gx_rep, gy_rep))
+
             rclpy.spin_once(self, timeout_sec=1.0)
 
         twist_msg.linear.x = 0.0
         twist_msg.angular.z = 0.0
         self.cmd_vel_pub.publish(twist_msg)
-        print('Done 2!')
+        print('Done!')
 
     def conic_and_quadratic(self):
         print("Conic and Quadratic Potential")
         self.zeta = 1.0
         self.alpha = 0.1
-        self.eta = 1.0
-        self.min_distance_to_the_goal = 5.0
+        self.eta = 0.5
+        #self.min_distance_to_the_goal = 5.0
                 
         gx_att, gy_att = self.conic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
         gx_rep, gy_rep = self.repulsive_gradient()
+        fU_att = self.quadratic_function(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
+        fU_rep = self.repulsive_function()
 
         twist_msg = Twist()
+        t = time.time()
         while not self.norm_gradient(gx_att,gy_att) < self.epsilon:
             print('x: ', round(self.current_position.x, 5), 'y: ', round(self.current_position.y, 5))
 
-            ux = self.alpha * (-gx_att + gx_rep)
-            uy = self.alpha * (-gy_att + gy_rep)
+            gU = self.norm_gradient(gx_att + gx_rep, gy_att + gy_rep)
+            print('gU: ', gU, 'Uatt: ', fU_att, 'Urep: ', fU_rep, 'U: ', fU_att+fU_rep)
 
-            # ux = -self.alpha * (gx_att + gx_rep)
-            # uy = -self.alpha * (gy_att + gy_rep)
+            if(gU < self.epsilon):
+                print("Local Minimum")
+                break
+
+            ux = -self.alpha * (gx_att + gx_rep)
+            uy = -self.alpha * (gy_att + gy_rep)
 
             v = ux*math.cos(self.current_orientation.z) + uy*math.sin(self.current_orientation.z)
             w = (1/self.h)*(-ux*math.sin(self.current_orientation.z) + uy*math.cos(self.current_orientation.z))
@@ -301,20 +388,28 @@ class ARP_ControllerNode(Node):
 
             if self.distance_to_the_goal(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y) <= self.min_distance_to_the_goal:
                 gx_att, gy_att = self.quadratic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
+                fU_att = self.quadratic_function(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
             else:
                 gx_att, gy_att = self.conic_and_quadratic_gradient(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
+                fU_att = self.conic_and_quadratic_function(self.current_position.x, self.current_position.y, self.desired_position.x, self.desired_position.y)
             gx_rep, gy_rep = self.repulsive_gradient()
+            fU_rep = self.repulsive_function()
+
+            self.time.append(time.time() - t)
+            self.U.append(fU_att+fU_rep)
+            self.Uatt.append(fU_att)
+            self.Urep.append(fU_rep)
+            self.gU.append(gU)
+            self.gUatt.append(self.norm_gradient(gx_att, gy_att))
+            self.gUrep.append(self.norm_gradient(gx_rep, gy_rep))
 
             rclpy.spin_once(self, timeout_sec=1.0)
 
         twist_msg.linear.x = 0.0
         twist_msg.angular.z = 0.0
         self.cmd_vel_pub.publish(twist_msg)
-        print('Done 3!')
+        print('Done!')
 
-
-
-    
 
 def main(args=None):
 
@@ -325,5 +420,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
