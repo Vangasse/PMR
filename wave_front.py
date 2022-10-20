@@ -59,10 +59,10 @@ class Turtlebot3_Navigator(Node):
         self.position = Point()
         self.orientation = Quaternion()
         self.Ts = .1
-        self.k = 2
+        self.k = 1
         self.d = .1
 
-        self.img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/wave.npy'))
+        self.img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/wave2.npy'))
 
     def odom_callback(self, msg):
         self.update_pose(msg)
@@ -70,10 +70,13 @@ class Turtlebot3_Navigator(Node):
 
         goal = [self.position.x, self.position.y]
         for i in range(10):
-            goal[0], goal[1] = self.get_step(self.img, goal)
+            goal[0], goal[1], param = self.get_step(self.img, goal)
+            if param == 'wall':
+                break
             # print(goal[0], goal[1])
             # print()
 
+        print()
         self.objective.x, self.objective.y = goal[0], goal[1]
         self.control(self.objective, self.position, yaw, self.d, self.k)
 
@@ -129,19 +132,19 @@ class Turtlebot3_Navigator(Node):
         for neighbor_index in neighbor_indexes:
             neghbor_values = np.append(neghbor_values, img[neighbor_index[0], neighbor_index[1]])
 
-        # print(neghbor_values)
+        print(neghbor_values, img[position[0], position[1]])
+        if neghbor_values.size == 0 or not any(neghbor_values):
+            return self.objective.x, self.objective.y, 'wall'
 
         min_neighbors = np.where(neghbor_values == np.min(neghbor_values[np.nonzero(neghbor_values)]))[0]
         min_neighbor_index = neighbor_indexes[min_neighbors[0]]
 
-        if img[min_neighbor_index[0], min_neighbor_index[1]] < img[position[0], position[1]]:
+        if img[min_neighbor_index[0], min_neighbor_index[1]] < img[position[0], position[1]] or img[position[0], position[1]] == 0:
             # print("Output:")
             # print(min_neighbor_index[0], min_neighbor_index[1])
-            return min_neighbor_index[0]*10/len(img) - 5, min_neighbor_index[1]*10/len(img) - 5
+            return min_neighbor_index[0]*10/len(img) - 5, min_neighbor_index[1]*10/len(img) - 5, 'go'
         else:
-            if img[position[0], position[1]] == 0:
-                return self.objective.x, self.objective.y
-            return position[0]*10/len(img) - 5, position[1]*10/len(img) - 5
+            return position[0]*10/len(img) - 5, position[1]*10/len(img) - 5, 'go'
 
     def control(self, objective, position, orientation, d, k):
         # print(objective, position)
