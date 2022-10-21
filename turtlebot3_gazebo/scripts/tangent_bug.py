@@ -271,7 +271,7 @@ class Turtlebot3_TangentBug(Node):
 
     def follow_obstacle(self):
  
-        G = -(2/np.pi)*np.arctan(self.k*(self.delta_m - self.epsilon))
+        G = (2/np.pi)*np.arctan(self.k*(self.delta_m - self.epsilon))
         H = np.sqrt(1-G*G)
         
         v = (np.cos(self.phi_m2)*G - np.sin(self.phi_m2)*H)
