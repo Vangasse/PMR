@@ -5,7 +5,7 @@
     <static>1</static>
     <link name='rows'>
       <collision name='one_one'>
-        <pose> 0 0 0 1.57 0 0</pose>
+        <pose> 0 0 0 1.57079632679 0 0</pose>
         <geometry>
           <mesh>
             <uri>model://turtlebot3_maze/meshes/maze.obj</uri>

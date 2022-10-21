@@ -48,20 +48,21 @@ max_contour = np.max(contours)
 croped = blur[min_contour:max_contour, min_contour:max_contour]
 
 map_size = 10
-robot_diameter = .6
-pixel_size = 10/len(croped)
+robot_diameter = .64
+pixel_size = map_size/len(croped)
 kernel_size = math.ceil(robot_diameter/pixel_size)
 
 kernel = np.ones((kernel_size,kernel_size), np.uint8)
 
 eroded = cv.erode(croped, kernel)
 
-final = cv.rotate(eroded, cv.ROTATE_90_COUNTERCLOCKWISE)
+final = cv.rotate(eroded, cv.ROTATE_90_CLOCKWISE)
 
 contours, hierarchy = cv.findContours(final, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 # cv.drawContours(blur, contours, -1, (0,255,0), 3)
 
 wave = wavefront(final/255, (525,785))
+# wave = wavefront(final/255, (465,650))
 
 # print(np.max(wave))
 
@@ -73,4 +74,4 @@ plt.subplot(133),plt.imshow(wave,'gray'),plt.title('Wavefront')
 plt.xticks([]), plt.yticks([])
 plt.show()
 
-np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wave.npy'), wave)
+np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wave2.npy'), wave)

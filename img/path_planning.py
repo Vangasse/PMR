@@ -22,13 +22,16 @@ def getStep(img, position):
     else:
         return position[0], position[1]
 
-img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wave.npy'))
+img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wave2.npy'))
+print(img.shape)
 
 normal = 255*img/np.max(img)
 
 color = cv.cvtColor(np.uint8(normal),cv.COLOR_GRAY2RGB)
 
-position = (110,90)
+# position = (458,262)
+position = (120,90)
+
 while True:
     x, y = getStep(img, position)
 
