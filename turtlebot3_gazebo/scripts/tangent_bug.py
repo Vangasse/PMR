@@ -244,39 +244,29 @@ class Turtlebot3_TangentBug(Node):
 
         return 0.5*v,0.5*w
 
-    # def follow_obstacle(self,vr):
-
-    #     G = (2/np.pi)*np.arctan(self.k*(self.delta_m - self.epsilon))
-    #     H = np.sqrt(1 - G*G)
-
-    #     dx = vr.x
-    #     dy = vr.y
-
-    #     sin = np.sin(self.yaw)
-    #     cos = np.cos(self.yaw)
-
-    #     # v = G*cos*dx + H*sin*dy
-    #     # w = (1/self.d)*(-G*sin*dx + H*cos*dy)
-
-    #     v = cos*dx + sin*dy
-    #     w = (1/self.d)*(-sin*dx + cos*dy)
-
-    #     w_max = 0.5
-    #     if w > w_max:
-    #         w = w_max
-    #     elif w < - w_max:
-    #         w = -w_max
-
-    #     return 0.5*v,0.5*w
-
     def follow_obstacle(self):
  
+        hora = [[],[]]
+        hora[0] = -np.sin(self.phi_m2 + self.yaw)
+        hora[1] = np.cos(self.phi_m2 + self.yaw) 
+
+        antihora = [[],[]]
+        antihora[0] = np.sin(self.phi_m2 + self.yaw)
+        antihora[1] = -np.cos(self.phi_m2 + self.yaw) 
+
+        anghora = self.angle_of_vectors(hora[0],hora[1],self.o2go.x,self.o2go.y)
+        angantihora = self.angle_of_vectors(antihora[0],antihora[1],self.o2go.x,self.o2go.y)
+
         G = (2/np.pi)*np.arctan(self.k*(self.delta_m - self.epsilon))
         H = np.sqrt(1-G*G)
-        
-        v = (np.cos(self.phi_m2)*G - np.sin(self.phi_m2)*H)
-        w = (np.sin(self.phi_m2)*G/self.d + np.cos(self.phi_m2)*H/self.d)
-        #print(v,w)
+
+        if anghora < angantihora:
+            v = -(np.cos(self.phi_m2)*G - np.sin(self.phi_m2)*H)
+            w = -(np.sin(self.phi_m2)*G/self.d + np.cos(self.phi_m2)*H/self.d)
+        else:
+            v = (np.cos(self.phi_m2)*G - np.sin(self.phi_m2)*H)
+            w = (np.sin(self.phi_m2)*G/self.d + np.cos(self.phi_m2)*H/self.d)
+
         return v,0.1*w
 
     def angle_of_vectors(self,a,b,c,d):
