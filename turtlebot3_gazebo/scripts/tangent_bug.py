@@ -181,50 +181,14 @@ class Turtlebot3_TangentBug(Node):
         
         for o in range(len(self.disc_points)):
             dist = np.sqrt((self.goal.x - self.disc_points[o][0])**2 + (self.goal.y - self.disc_points[o][1])**2 )
-            if dist < self.D_close:
+            dist2 = np.sqrt((self.position.x - self.disc_points[o][0])**2 + (self.position.y - self.disc_points[o][1])**2 )
+            if dist + dist2 < self.D_close:
                 o_close = o
                 self.D_close = dist
 
         self.phi_m = self.phi[o_close]
         self.o2go.x = self.disc_points[o_close][0]
         self.o2go.y = self.disc_points[o_close][1] 
-
-    def find_tangent(self, vec_obs):
-        hip = np.sqrt(vec_obs[0]**2 + vec_obs[1]**2)
-
-        v1 = vec_obs[1]/hip
-        v2 = vec_obs[0]/hip
-
-        v = np.array([v1,v2])
-
-        norma = np.linalg.norm(v)
-
-        vr = Point()
-
-        hora = [[],[]]
-        hora[0] = -norma*np.sin(self.phi_m2 + self.yaw)
-        hora[1] = norma*np.cos(self.phi_m2 + self.yaw) 
-
-        antihora = [[],[]]
-        antihora[0] = norma*np.sin(self.phi_m2 + self.yaw)
-        antihora[1] = -norma*np.cos(self.phi_m2 + self.yaw) 
-
-        #vr.x = v1/norma
-        #vr.y = v2/norma
-
-        anghora = self.angle_of_vectors(hora[0],hora[1],self.o2go.x,self.o2go.y)
-        angantihora = self.angle_of_vectors(antihora[0],antihora[1],self.o2go.x,self.o2go.y)
-
-        print(anghora,angantihora)
-
-        if False: #anghora < angantihora:
-            vr.x = hora[0]
-            vr.y = hora[1] 
-        else:
-            vr.x = antihora[0]
-            vr.y = antihora[1] 
-
-        return vr
 
     def go2goal(self, objective):
         dx = self.k*(objective.x - self.position.x)
@@ -319,7 +283,6 @@ class Turtlebot3_TangentBug(Node):
                     v,w = self.go2goal(self.o2go)
                     Node.get_logger(self).info(f'Going to discontinuity at {self.o2go}', once=False)
                 else:
-                    vr = self.find_tangent(self.paralel)
                     v,w = self.follow_obstacle()
                     
                     Node.get_logger(self).info('Following obstacle', once=True)
@@ -331,8 +294,6 @@ class Turtlebot3_TangentBug(Node):
 
         cmd_vel_pub = Twist()
 
-        # cmd_vel_pub.linear.x = 0.0
-        # cmd_vel_pub.angular.z = 0.0
         cmd_vel_pub.linear.x = v
         cmd_vel_pub.angular.z = w
         
