@@ -57,6 +57,7 @@ class Turtlebot3_TangentBug(Node):
 
         self.o2go = Point()
         self.goal = Point()
+        self.hit_point = Point()
 
         goal_input = eval(sys.argv[1])
         self.goal.x = float(goal_input[0])
@@ -64,19 +65,23 @@ class Turtlebot3_TangentBug(Node):
 
         self.position = Point()
         self.orientation = Quaternion()
-        self.Ts = .1
+
         self.k = .3
         self.d = .1
         self.ranges = []
         self.angle_increment = 0
         self.range_max = 0
 
-        self.epsilon = 1
+        self.epsilon = 0.8
         self.v = 0
         self.w = 0
         self.phi_m = 0
-        self.phi_m2 = 0
+        self.phi_m_before = 0
         self.phi = []
+        self.hora = False
+        self.antihora = False
+        self.no_discontinuity = False
+        self.acum = 0
 
         self.yaw = 0
 
@@ -103,9 +108,9 @@ class Turtlebot3_TangentBug(Node):
                 k_m = k
 
         #Compute the associated direction in the body frame
-        self.phi_m2 = k_m*self.angle_increment
+        self.phi_m = k_m*self.angle_increment
 
-        self.paralel = [self.delta_m*np.cos(self.phi_m2),self.delta_m*np.sin(self.phi_m2)]
+        self.paralel = [self.delta_m*np.cos(self.phi_m),self.delta_m*np.sin(self.phi_m)]
 
         self.control()
 
@@ -119,8 +124,9 @@ class Turtlebot3_TangentBug(Node):
     #################
 
     def find_direction(self):
-        f1 = np.array([1,0])
-        f2 = np.array([self.goal.x,self.goal.y])
+        # Find range of lidar in direction of the goal
+        f1 = np.array([self.goal.x - self.position.x,self.goal.y - self.position.y])
+        f2 = np.array([np.cos(self.yaw),np.sin(self.yaw)])
 
         if np.cross(f1,f2) > 0:
             theta = np.arccos(f1.dot(f2)/(norm(f1)*norm(f2)))
@@ -128,26 +134,21 @@ class Turtlebot3_TangentBug(Node):
             theta = -np.arccos(f1.dot(f2)/(norm(f1)*norm(f2)))
      
         try:
-            tot = int((self.yaw - theta)*180/np.pi)
-        except: 
-            tot = 0
-        
-        if tot > 180:
-            tot = tot - 360
-        elif tot < -180:
-            tot = 360 + tot
+            theta = int(180*theta/np.pi)
+        except:
+            theta = 0
 
         front = np.hstack((self.ranges[-6:-1],self.ranges[0:6]))
-
-        if abs(tot) < 6:
+        
+        if abs(theta) < 6:
             self.direction = front
-        elif tot < 0:
-            self.direction = np.array(self.ranges[-tot-3:-tot+3])
-        elif tot > 0:
-            self.direction = np.array(self.ranges[-tot-3:-tot+3])
+        elif theta < 0:
+            self.direction = np.array(self.ranges[-theta-3:-theta+3])
+        elif theta > 0:
+            self.direction = np.array(self.ranges[-theta-3:-theta+3])
 
     def find_discontinuity_points(self):
-
+        # Find coordinates of the points of discontinuity seem by lidar in respect to world frame
         n_lasers = len(self.ranges)
         D_breaks = []
         o_breaks = []
@@ -176,21 +177,26 @@ class Turtlebot3_TangentBug(Node):
             self.disc_points.append([point_x,point_y])
 
     def find_better_point(self):
+        # Computes which of the discontinuity points is closer to the goal
         o_close = 0
         self.D_close = float("inf")
         
-        for o in range(len(self.disc_points)):
-            dist = np.sqrt((self.goal.x - self.disc_points[o][0])**2 + (self.goal.y - self.disc_points[o][1])**2 )
-            dist2 = np.sqrt((self.position.x - self.disc_points[o][0])**2 + (self.position.y - self.disc_points[o][1])**2 )
-            if dist + dist2 < self.D_close:
-                o_close = o
-                self.D_close = dist
+        if len(self.disc_points) == 0:
+            self.no_discontinuity = True
+            return
+        else:
+            for o in range(len(self.disc_points)):
+                dist = np.sqrt((self.goal.x - self.disc_points[o][0])**2 + (self.goal.y - self.disc_points[o][1])**2 )
+                dist2 = np.sqrt((self.position.x - self.disc_points[o][0])**2 + (self.position.y - self.disc_points[o][1])**2 )
+                if dist + dist2 < self.D_close:
+                    o_close = o
+                    self.D_close = dist
 
-        self.phi_m = self.phi[o_close]
         self.o2go.x = self.disc_points[o_close][0]
         self.o2go.y = self.disc_points[o_close][1] 
 
     def go2goal(self, objective):
+        # Sends differential robot in direction of a given point
         dx = self.k*(objective.x - self.position.x)
         dy = self.k*(objective.y - self.position.y)
 
@@ -205,44 +211,93 @@ class Turtlebot3_TangentBug(Node):
             w = w_max
         elif w < - w_max:
             w = -w_max
+            
+        v_min = 1
+        if v < v_min:
+            v = v_min
 
-        return 0.5*v,0.5*w
+        return 0.5*v,0.7*w
 
     def follow_obstacle(self):
- 
-        hora = [[],[]]
-        hora[0] = -np.sin(self.phi_m2 + self.yaw)
-        hora[1] = np.cos(self.phi_m2 + self.yaw) 
-
-        antihora = [[],[]]
-        antihora[0] = np.sin(self.phi_m2 + self.yaw)
-        antihora[1] = -np.cos(self.phi_m2 + self.yaw) 
-
-        anghora = self.angle_of_vectors(hora[0],hora[1],self.o2go.x,self.o2go.y)
-        angantihora = self.angle_of_vectors(antihora[0],antihora[1],self.o2go.x,self.o2go.y)
+        # Follow wall adapted to decide whether is better to follow clockwise or anti-clockwise
 
         G = (2/np.pi)*np.arctan(self.k*(self.delta_m - self.epsilon))
         H = np.sqrt(1-G*G)
 
-        if anghora < angantihora:
-            v = -(np.cos(self.phi_m2)*G - np.sin(self.phi_m2)*H)
-            w = -(np.sin(self.phi_m2)*G/self.d + np.cos(self.phi_m2)*H/self.d)
-        else:
-            v = (np.cos(self.phi_m2)*G - np.sin(self.phi_m2)*H)
-            w = (np.sin(self.phi_m2)*G/self.d + np.cos(self.phi_m2)*H/self.d)
+        if self.acum > 0 and self.hora == True:
+            v = -(np.cos(self.phi_m)*G - np.sin(self.phi_m)*H)
+            w = -(np.sin(self.phi_m)*G/self.d + np.cos(self.phi_m)*H/self.d)
 
-        return v,0.1*w
+        elif self.acum > 0 and self.antihora == True:
+            v = (np.cos(self.phi_m)*G - np.sin(self.phi_m)*H)
+            w = (np.sin(self.phi_m)*G/self.d + np.cos(self.phi_m)*H/self.d)
+
+        else:
+            self.hora = False
+            self.antihora = False
+
+            hora = [[],[]]
+            hora[0] = -np.sin(self.phi_m + self.yaw)
+            hora[1] = np.cos(self.phi_m + self.yaw) 
+
+            antihora = [[],[]]
+            antihora[0] = np.sin(self.phi_m + self.yaw)
+            antihora[1] = -np.cos(self.phi_m + self.yaw) 
+
+            anghora = self.angle_of_vectors(hora[0],hora[1],self.o2go.x,self.o2go.y)
+            angantihora = self.angle_of_vectors(antihora[0],antihora[1],self.o2go.x,self.o2go.y)
+
+            if anghora < angantihora:
+                v = -(np.cos(self.phi_m)*G - np.sin(self.phi_m)*H)
+                w = -(np.sin(self.phi_m)*G/self.d + np.cos(self.phi_m)*H/self.d)
+                self.hora = True
+            else:
+                v = (np.cos(self.phi_m)*G - np.sin(self.phi_m)*H)
+                w = (np.sin(self.phi_m)*G/self.d + np.cos(self.phi_m)*H/self.d)
+                self.antihora = True
+                
+        w_max = 2
+        if w > w_max:
+            w = w_max
+        elif w < - w_max:
+            w = -w_max
+
+        return 0.8*v,0.4*w
+
+    def check_if_returned(self):
+        # Checks if robot returned to hit point
+
+        returned = False
+        dist = np.sqrt((self.hit_point.x - self.position.x)**2 + (self.hit_point.y - self.position.y)**2)
+
+        if self.acum == 0:
+            self.hit_point = self.position
+
+        angle_dif = abs(self.phi_m - self.phi_m_before)
+
+        if not self.close2obstacle or angle_dif > 2:
+            self.acum = 0
+        else:
+            self.acum += 1
+
+        if self.acum >= 20 and dist < 0.6:
+            returned = True
+        print(self.phi_m)
+        print(self.phi_m_before)
+        self.phi_m_before = self.phi_m
+
+        return returned
 
     def angle_of_vectors(self,a,b,c,d):
-        
+        # Find angle between two given vectors
         dotProduct = a*c + b*d
-        modOfVector1 = np.sqrt( a*a + b*b)*np.sqrt(c*c + d*d) 
+        modOfVector1 = np.sqrt(a*a + b*b)*np.sqrt(c*c + d*d) 
         
         angle = dotProduct/modOfVector1
         return angle
 
     def euler_from_quaternion(self, orientation):
-
+        #  Roll Pitch Yaw from quaternion
             x = orientation.x
             y = orientation.y
             z = orientation.z
@@ -265,30 +320,35 @@ class Turtlebot3_TangentBug(Node):
 
 
     def control(self):
+        # Control Step
         self.find_direction()
 
-        self.infinity_ranges = all(self.direction > self.range_max )
-        self.close2obstacle = not all(np.hstack((self.ranges[-100:-1],self.ranges[0:100])) > self.epsilon + 0.5)
-        self.got_there = np.sqrt((self.goal.x - self.position.x)**2 + (self.goal.y - self.position.y)**2 ) < 0.8
+        distance_to_goal = np.sqrt((self.goal.x - self.position.x)**2 + (self.goal.y - self.position.y)**2)
 
-        if not self.got_there:
-            if self.infinity_ranges and not self.close2obstacle:
+        self.infinity_ranges = all(self.direction > distance_to_goal)
+        self.close2obstacle = not all(np.hstack((self.ranges[-100:-1],self.ranges[0:100])) > (self.epsilon + 1))
+        self.got_there = distance_to_goal < 0.5
+        returned = self.check_if_returned()
+
+        if not self.got_there and not returned:
+            if self.infinity_ranges: 
                 v,w = self.go2goal(self.goal)
-                Node.get_logger(self).info(f'Going do goal at {self.goal}', once=True)
+                Node.get_logger(self).info(f'Going to Goal at {self.goal}', once=False)
             else:
                 self.find_discontinuity_points()
                 self.find_better_point()
 
-                if not self.close2obstacle:
+                if not self.close2obstacle and not self.no_discontinuity:
                     v,w = self.go2goal(self.o2go)
-                    Node.get_logger(self).info(f'Going to discontinuity at {self.o2go}', once=False)
+                    Node.get_logger(self).info(f'Going to Discontinuity at {self.o2go}', once=False)
                 else:
                     v,w = self.follow_obstacle()
-                    
-                    Node.get_logger(self).info('Following obstacle', once=True)
-                    pass
+                    Node.get_logger(self).info('Following Obstacle', once=False)
         else:
-            Node.get_logger(self).info('Simulation Finished', once=True)
+            if self.got_there:
+                Node.get_logger(self).info('Simulation Finished: Goal Reached', once=False)
+            else:
+                Node.get_logger(self).info('Simulation Finished: Goal Cannot be Achieved', once=False)
             v = 0.0
             w = 0.0
 
