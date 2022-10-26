@@ -43,10 +43,42 @@ Finally, clone this repository and run:
 
 `export TURTLEBOT3_MODEL=waffle`
 
-And launch the simulation scenarios:
+And launch the empty world example:
+
+`ros2 launch turtlebot3_gazebo empty_world.launch.py`
+
+# Running the Algorithms
+
+## Tangent Bug
+
+## Curve Following
+
+## Potential Fields
+
+## Wave-Front
+
+Wave-Front was tested in two scenarios, a curved path and a bifurcation. The current state of the implementation is configured to addopt the biffurcation map. To change the scenario, few changes in the code will be necessary. A fixed goal is previously considered for map computation, to change it, small alterations will also be needed.
+
+### Running Bifurcation Scene and Wave-Front
+
+To open the scene in Gazebo, run:
+
+`ros2 launch turtlebot3_gazebo turtlebot3_maze2.launch.py`
+
+To run the wave-front navigation:
+
+`python3 PMR_ws/src/PMR/wavefront.py`
+
+### Running Maze Scene and Wave-Front
+
+To open the scene in Gazebo, run:
 
 `ros2 launch turtlebot3_gazebo turtlebot3_maze.launch.py`
 
-`ros2 launch turtlebot3_gazebo turtlebot3_bamboomaze.launch.py`
+Before running the wave-front navigation, change line 65 from `PMR_ws/src/PMR/wavefront.py` to:
 
-<img src="https://github.com/ROBOTIS-GIT/emanual/blob/master/assets/images/platform/turtlebot3/logo_turtlebot3.png" width="300">
+`self.img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/wave.npy'))`
+
+And then you can run:
+
+`python3 PMR_ws/src/PMR/wavefront.py`
