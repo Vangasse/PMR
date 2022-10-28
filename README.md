@@ -51,9 +51,33 @@ And launch the empty world example:
 
 ## Tangent Bug
 
+Run the Gazebo Scenario:
+
+`ros2 launch turtlebot3_gazebo turtlebot3_islands.launch.py`
+
+And to run the algorithm, type as follows with the objective point as parameters:
+
+`python3 PMR_ws/src/PMR/turtlebot3_gazebo/scripts/tangent_bug.py 9,-1`
+
 ## Curve Following
 
+Start the empty world:
+
+`ros2 launch turtlebot3_gazebo empty_world.launch.py`
+
+Run the algorithm:
+
+`python3 PMR_ws/src/PMR/turtlebot3_gazebo/scripts/vectorfield.py`
+
 ## Potential Fields
+
+Run the Gazebo Scenario:
+
+`ros2 launch turtlebot3_gazebo turtlebot3_islands.launch.py`
+
+Run the algorithm, selecting the objective point followed by the potential function type:
+
+`python3 PMR_ws/src/PMR/arp_controller.py 9 0 3`
 
 ## Wave-Front
 
