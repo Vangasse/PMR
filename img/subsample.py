@@ -20,7 +20,7 @@ def subsample(img, kernel):
 
     return img2
 
-img = cv.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maze.png'),0)
+img = cv.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'islands.png'),0)
 
 ## Segmentação entre obstáculos(Preto) e espaço navegável(Branco)
 ret,thresh = cv.threshold(img,127,255,cv.THRESH_BINARY_INV)
@@ -42,7 +42,7 @@ eroded = cv.erode(croped, kernel)
 ## Rotação para sistema de coordenadas do Gazebo
 final = cv.rotate(eroded, cv.ROTATE_90_CLOCKWISE)
 
-subsampled = subsample(final, kernel=17)
+subsampled = subsample(final, kernel=15)
 print(subsampled.shape)
 
 test = np.array([[1, 0],[0, 1]])
