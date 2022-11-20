@@ -45,12 +45,12 @@ final = cv.rotate(eroded, cv.ROTATE_90_CLOCKWISE)
 subsampled = subsample(final, kernel=15)
 print(subsampled.shape)
 
-test = np.array([[1, 0],[0, 1]])
-
 plt.subplot(131),plt.imshow(img,'gray',vmin=0,vmax=255),plt.title('Original')
 plt.xticks([]), plt.yticks([])
 plt.subplot(132),plt.imshow(final,'gray',vmin=0,vmax=255),plt.title('Treated Map')
 plt.xticks([]), plt.yticks([])
-plt.subplot(133),plt.imshow(subsampled,'gray'),plt.title('Wavefront')
+plt.subplot(133),plt.imshow(subsampled,'gray'),plt.title('Subsampled')
 plt.xticks([]), plt.yticks([])
 plt.show()
+
+np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'subsampled.npy'), subsampled)
