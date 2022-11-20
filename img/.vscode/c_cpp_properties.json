@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/gabriel/ros2_ws/install/turtlebot3_gazebo/include/**",
+        "/home/gabriel/ros2_ws/install/turtlebot3_fake_node/include/**",
+        "/opt/ros/foxy/include/**",
+        "/home/gabriel/ros2_ws/src/PMR/turtlebot3_fake_node/include/**",
+        "/home/gabriel/ros2_ws/src/PMR/turtlebot3_gazebo/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
