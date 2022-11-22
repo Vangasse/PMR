@@ -53,10 +53,10 @@ class RRT():
         line = np.concatenate((x,y), axis=1)
 
         # print(x, y)
-        print(line)
+        # print(line)
         
         for point in line:
-            print(str(point) + ":" + str(self.map[int(point[0]), int(point[1])]))
+            # print(str(point) + ":" + str(self.map[int(point[0]), int(point[1])]))
             if self.map[int(point[0]), int(point[1])] == 0:
                 # img[int(point[0]), int(point[1])] = (1,0,0)
                 # plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
@@ -68,7 +68,7 @@ class RRT():
         return 1
 
     def createRoot(self, node):
-        self.G.add_node(node)
+        self.G.add_node(node, antecessor=node)
 
         # elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] > 0.5]
         # esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] <= 0.5]
@@ -124,6 +124,7 @@ class RRT():
 
     def addNode(self, father, node, d):
         self.G.add_edge(father, node, weight = d)
+        nx.set_node_attributes(self.G, {node: father}, name="antecessor")
 
         # elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] > 0.5]
         # esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] <= 0.5]
@@ -154,6 +155,7 @@ class RRT():
     def reach(self, start, end, dp, d=3):
 
         if dp < d:
+            return 0
             if d < 1:
                 return 0
             node = end
@@ -171,11 +173,11 @@ class RRT():
 
         d = sp.spatial.distance.euclidean(node, start)
 
-        print(start, node)
+        # print(start, node)
         if self.checkConnection(start, node):
             self.addNode(start, node, d)
             return node
-        print()
+        # print()
         return 0
 
     def buildTree(self, img):
@@ -197,7 +199,11 @@ class RRT():
 
                 img[last_node[0],last_node[1]] = (0,1,0)
 
-        return img
+        path = [self.goal]
+        while not path[0] == self.start:
+            path.insert(0, self.G.nodes[path[0]]["antecessor"])
+
+        return img, path
 
 
 
@@ -214,7 +220,10 @@ def main():
 
     # rrt.checkConnection(start, goal, img)
 
-    img = rrt.buildTree(img)
+    img, path = rrt.buildTree(img)
+
+    print(path)
+    
     plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
     plt.show()
 
