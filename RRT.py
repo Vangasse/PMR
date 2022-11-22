@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 from matplotlib import pyplot as plt
+import scipy as sp
 
 import networkx as nx
 
@@ -37,47 +38,63 @@ class RRT():
 
     def checkConnection(self, start, goal, resolution=.25):
 
-        num = int(abs(start[1] - goal[1])/resolution)
+        # Notei o problema em que, se escolhida uma dimensão de referência, caso goal e starte estivessem alinhados, não se criava linha.
+        numx = int(abs(start[0] - goal[0])/resolution)
+        numy = int(abs(start[1] - goal[1])/resolution)
+        if numx > numy:
+            num = numx
+        else:
+            num = numy
 
-        x = np.round(np.linspace(start[1],goal[1],num=num))
-        y = np.round(np.linspace(start[0],goal[0],num=num))
+        x = np.round(np.linspace(start[0],goal[0],num=num))
+        y = np.round(np.linspace(start[1],goal[1],num=num))
         x = x.reshape(len(x), 1)
         y = y.reshape(len(y), 1)
         line = np.concatenate((x,y), axis=1)
+
+        # print(x, y)
+        print(line)
         
         for point in line:
+            print(str(point) + ":" + str(self.map[int(point[0]), int(point[1])]))
             if self.map[int(point[0]), int(point[1])] == 0:
+                # img[int(point[0]), int(point[1])] = (1,0,0)
+                # plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
+                # plt.show()
                 return 0
+            # img[int(point[0]), int(point[1])] = (0,1,0)
+            # plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
+            # plt.show()
         return 1
 
     def createRoot(self, node):
         self.G.add_node(node)
 
-        elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] > 0.5]
-        esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] <= 0.5]
+        # elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] > 0.5]
+        # esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] <= 0.5]
 
-        pos = nx.spring_layout(self.G, seed=7)
+        # pos = nx.spring_layout(self.G, seed=7)
 
-        # nodes
-        nx.draw_networkx_nodes(self.G, pos, node_size=700)
+        # # nodes
+        # nx.draw_networkx_nodes(self.G, pos, node_size=700)
 
-        # edges
-        nx.draw_networkx_edges(self.G, pos, edgelist=elarge, width=6)
-        nx.draw_networkx_edges(
-            self.G, pos, edgelist=esmall, width=6, alpha=0.5, edge_color="b", style="dashed"
-        )
+        # # edges
+        # nx.draw_networkx_edges(self.G, pos, edgelist=elarge, width=6)
+        # nx.draw_networkx_edges(
+        #     self.G, pos, edgelist=esmall, width=6, alpha=0.5, edge_color="b", style="dashed"
+        # )
 
-        # node labels
-        nx.draw_networkx_labels(self.G, pos, font_size=20, font_family="sans-serif")
-        # edge weight labels
-        edge_labels = nx.get_edge_attributes(self.G, "weight")
-        nx.draw_networkx_edge_labels(self.G, pos, edge_labels)
+        # # node labels
+        # nx.draw_networkx_labels(self.G, pos, font_size=20, font_family="sans-serif")
+        # # edge weight labels
+        # edge_labels = nx.get_edge_attributes(self.G, "weight")
+        # nx.draw_networkx_edge_labels(self.G, pos, edge_labels)
 
-        ax = plt.gca()
-        ax.margins(0.08)
-        plt.axis("off")
-        plt.tight_layout()
-        plt.show()
+        # ax = plt.gca()
+        # ax.margins(0.08)
+        # plt.axis("off")
+        # plt.tight_layout()
+        # plt.show()
 
     def findCloser(self, point):
         queue = [self.start]
@@ -93,9 +110,11 @@ class RRT():
                 if not son in visited:
                     queue.append(son)
 
-            dx = (node[0] - point[0])**2
-            dy = (node[1] - point[1])**2
-            d = np.sqrt(dx+dy)
+            # dx = (node[0] - point[0])**2
+            # dy = (node[1] - point[1])**2
+            # d = np.sqrt(dx+dy)
+
+            d = sp.spatial.distance.euclidean(node, point)
 
             if d < d_min:
                 d_min = d
@@ -106,55 +125,79 @@ class RRT():
     def addNode(self, father, node, d):
         self.G.add_edge(father, node, weight = d)
 
-        elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] > 0.5]
-        esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] <= 0.5]
+        # elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] > 0.5]
+        # esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d["weight"] <= 0.5]
 
-        pos = nx.spring_layout(self.G, seed=7)
+        # pos = nx.spring_layout(self.G, seed=7)
 
-        # nodes
-        nx.draw_networkx_nodes(self.G, pos, node_size=700)
+        # # nodes
+        # nx.draw_networkx_nodes(self.G, pos, node_size=700)
 
-        # edges
-        nx.draw_networkx_edges(self.G, pos, edgelist=elarge, width=6)
-        nx.draw_networkx_edges(
-            self.G, pos, edgelist=esmall, width=6, alpha=0.5, edge_color="b", style="dashed"
-        )
+        # # edges
+        # nx.draw_networkx_edges(self.G, pos, edgelist=elarge, width=6)
+        # nx.draw_networkx_edges(
+        #     self.G, pos, edgelist=esmall, width=6, alpha=0.5, edge_color="b", style="dashed"
+        # )
 
-        # node labels
-        nx.draw_networkx_labels(self.G, pos, font_size=20, font_family="sans-serif")
-        # edge weight labels
-        edge_labels = nx.get_edge_attributes(self.G, "weight")
-        nx.draw_networkx_edge_labels(self.G, pos, edge_labels)
+        # # node labels
+        # nx.draw_networkx_labels(self.G, pos, font_size=20, font_family="sans-serif")
+        # # edge weight labels
+        # edge_labels = nx.get_edge_attributes(self.G, "weight")
+        # nx.draw_networkx_edge_labels(self.G, pos, edge_labels)
 
-        ax = plt.gca()
-        ax.margins(0.08)
-        plt.axis("off")
-        plt.tight_layout()
-        plt.show()
+        # ax = plt.gca()
+        # ax.margins(0.08)
+        # plt.axis("off")
+        # plt.tight_layout()
+        # plt.show()
         
     def reach(self, start, end, dp, d=3):
 
-        q = dp/d
+        if dp < d:
+            if d < 1:
+                return 0
+            node = end
+        else:
+            q = dp/d
 
-        x = int(np.round(start[0] - (start[0] - end[0])/q))
-        y = int(np.round(start[1] - (start[1] - end[1])/q))
+            x = int(np.round(start[0] - (start[0] - end[0])/q))
+            y = int(np.round(start[1] - (start[1] - end[1])/q))
 
-        dx = (start[0] - x)**2
-        dy = (start[1] - y)**2
-        d = np.sqrt(dx+dy)
+            node = (x,y)
 
-        node = (x,y)
+        # dx = (start[0] - x)**2
+        # dy = (start[1] - y)**2
+        # d = np.sqrt(dx+dy)
 
+        d = sp.spatial.distance.euclidean(node, start)
+
+        print(start, node)
         if self.checkConnection(start, node):
             self.addNode(start, node, d)
-            return 0
+            return node
+        print()
+        return 0
 
-        return 1
+    def buildTree(self, img):
+        img[self.start[0],self.start[1]] = (0,0,1)
 
-    # def buildTree(self):
+        while True:
 
-    #     point = self.pickPoint()
-        
+            point = self.pickPoint()
+
+            closer, dp = self.findCloser(point)
+
+            last_node = self.reach(closer, point, dp)
+
+            if last_node:
+                if sp.spatial.distance.euclidean(last_node, self.goal) < 4:
+                    self.addNode(last_node, self.goal, sp.spatial.distance.euclidean(last_node, self.goal))
+                    img[self.goal[0],self.goal[1]] = (1,0,0)
+                    break
+
+                img[last_node[0],last_node[1]] = (0,1,0)
+
+        return img
 
 
 
@@ -162,19 +205,18 @@ class RRT():
 def main():
     img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
 
-    start = (24, 36)
-    goal = (36, 28)
+    start = (36, 18)
+    goal = (29, 38)
 
     rrt = RRT(start, goal, img)
 
     img = np.stack((img,)*3, axis=-1)
 
-    node = rrt.pickFreePoint()
+    # rrt.checkConnection(start, goal, img)
 
-    closer, d = rrt.findCloser(node)
-
-    while not rrt.reach(closer, node, d):
-        pass
+    img = rrt.buildTree(img)
+    plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
+    plt.show()
 
     # for i in range(100):
     #     point = rrt.pickFreePoint()
