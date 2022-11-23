@@ -19,6 +19,7 @@ from distutils.log import debug
 import rclpy
 import numpy as np
 import math
+import os
 
 from rclpy.node import Node
 
@@ -33,7 +34,7 @@ from rclpy.qos import qos_profile_sensor_data
 
 class Turtlebot3_Navigator(Node):
 
-    def __init__(self,path):
+    def __init__(self,path,flag):
         super().__init__('turtlebot3_navigator')
         qos = QoSProfile(depth=10)
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
@@ -52,7 +53,7 @@ class Turtlebot3_Navigator(Node):
         self.velocity = 0.0
         self.k = .1
         self.d = .1
-        self.v_lim = 1
+        self.v_lim = 1.0
         self.w_lim = np.pi/6
 
         self.objective_curve = Path()
@@ -63,6 +64,9 @@ class Turtlebot3_Navigator(Node):
         self.trail.header.frame_id = "odom"
         self.trail.header.stamp = self.get_clock().now().to_msg()
 
+        self.flag_closed_path = flag
+        self.end_of_path = False
+
         # Cria curva
         theta = np.arange(0, 2*np.pi, 0.01)
 
@@ -70,8 +74,6 @@ class Turtlebot3_Navigator(Node):
 
         R = 3
         r = 1
-
-        print(self.C)
 
         # for theta1 in theta:
             
@@ -154,7 +156,11 @@ class Turtlebot3_Navigator(Node):
         norma = np.linalg.norm(np.array([p_star[0] - (position.x + dx) ,p_star[1] - (position.y + dy)])) # Norma da distância p p*
         
         N = [(p_star[0] - (position.x + dx))/norma,(p_star[1] - (position.y + dy))/norma] # Vetor normal
-        
+
+        if not self.flag_closed_path:
+            if j >= (len(C[1])-1):
+                self.end_of_path = True
+
         if j == (len(C[1])-1):
             T = [C[0][0] - C[0][j] , C[1][0] - C[1][j]] # Caso especial
         else:
@@ -189,6 +195,10 @@ class Turtlebot3_Navigator(Node):
 
         cmd_vel_pub = Twist()
 
+        if self.end_of_path:
+            v = 0.0
+            w = 0.0
+
         if v < self.v_lim:
             cmd_vel_pub.linear.x = v
         else:
@@ -207,40 +217,27 @@ class Turtlebot3_Navigator(Node):
 
 
 
-def nodes_to_path(nodes):
+def discrete_to_continuos(nodes):
     path = [[],[]]
     for i in range(len(nodes) - 1):
-        path[0] = np.hstack((path[0] , np.linspace(nodes[i][0],nodes[i+1][0],5)))
-        path[1] = np.hstack((path[1] , np.linspace(nodes[i][1],nodes[i+1][1],5)))
-   
+        path[0] = list(np.hstack((path[0] , np.linspace(nodes[i][0],nodes[i+1][0],10))))
+        path[1] = list(np.hstack((path[1] , np.linspace(nodes[i][1],nodes[i+1][1],10))))
+
     return path 
 
 
 
 
 def main(args=None):
-    path_nodes_str = ''
-    with open('path_a_star.txt', 'r') as reader:
-        path_nodes_str = path_nodes_str + reader.read()
+    path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'))
 
-    path_nodes_str = path_nodes_str.split("\n")
+    path = discrete_to_continuos(path_discrete)
 
-    path_nodes_str = [i.split(" ") for i in path_nodes_str[:-1]]
-
-    path_nodes_float = []
-    for i in path_nodes_str:
-        path_nodes_float.append([])
-        for o in i:
-            path_nodes_float[-1].append(float(o))
-
-
-    path = nodes_to_path(path_nodes_float)
-
-
+    plath_is_closed = False
 
     rclpy.init(args=args)
 
-    navigator = Turtlebot3_Navigator(path)
+    navigator = Turtlebot3_Navigator(path,plath_is_closed)
 
     rclpy.spin(navigator)
 
