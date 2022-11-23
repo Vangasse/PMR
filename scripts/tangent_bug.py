@@ -66,7 +66,8 @@ class Turtlebot3_TangentBug(Node):
         self.position = Point()
         self.orientation = Quaternion()
 
-        self.k = .3
+        self.k1 = .3
+        self.k2 = .3
         self.d = .1
         self.ranges = []
         self.angle_increment = 0
@@ -197,8 +198,8 @@ class Turtlebot3_TangentBug(Node):
 
     def go2goal(self, objective):
         # Sends differential robot in direction of a given point
-        dx = self.k*(objective.x - self.position.x)
-        dy = self.k*(objective.y - self.position.y)
+        dx = self.k1*(objective.x - self.position.x)
+        dy = self.k1*(objective.y - self.position.y)
 
         sin = np.sin(self.yaw)
         cos = np.cos(self.yaw)
@@ -216,12 +217,13 @@ class Turtlebot3_TangentBug(Node):
         if v < v_min:
             v = v_min
 
-        return 0.5*v,0.7*w
+        #return 0.5*v,0.7*w
+        return v,w
 
     def follow_obstacle(self):
         # Follow wall adapted to decide whether is better to follow clockwise or anti-clockwise
 
-        G = (2/np.pi)*np.arctan(self.k*(self.delta_m - self.epsilon))
+        G = (2/np.pi)*np.arctan(self.k2*(self.delta_m - self.epsilon))
         H = np.sqrt(1-G*G)
 
         if self.acum > 0 and self.hora == True:
@@ -262,7 +264,8 @@ class Turtlebot3_TangentBug(Node):
         elif w < - w_max:
             w = -w_max
 
-        return 0.8*v,0.4*w
+        #return 0.8*v,0.4*w
+        return v,w
 
     def check_if_returned(self):
         # Checks if robot returned to hit point

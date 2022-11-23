@@ -33,7 +33,7 @@ from rclpy.qos import qos_profile_sensor_data
 
 class Turtlebot3_Navigator(Node):
 
-    def __init__(self):
+    def __init__(self,path):
         super().__init__('turtlebot3_navigator')
         qos = QoSProfile(depth=10)
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
@@ -66,26 +66,26 @@ class Turtlebot3_Navigator(Node):
         # Cria curva
         theta = np.arange(0, 2*np.pi, 0.01)
 
-        self.C = [[],[]]
+        self.C = path
 
         R = 3
         r = 1
 
-        for theta1 in theta:
-            # self.C[0].append(2*np.cos(theta1)+0.2 * 2*np.sin(2*theta1)+0.05*np.sin(4*theta1))
-            # self.C[1].append(2*np.sin(theta1)-0.2 * 2*np.cos(2*theta1)-0.05*np.sin(4*theta1))
+        print(self.C)
 
-            self.C[0].append(3*np.sin(theta1) + np.sin(10*theta1))
-            self.C[1].append(3*np.cos(theta1) + np.cos(10*theta1))
+        # for theta1 in theta:
+            
+        #     self.C[0].append(3*np.sin(theta1) + np.sin(10*theta1))
+        #     self.C[1].append(3*np.cos(theta1) + np.cos(10*theta1))
         
-            self.objective_step = PoseStamped()
-            self.objective_step.header.frame_id = "odom"
-            self.objective_step.header.stamp = self.get_clock().now().to_msg()
+        #     self.objective_step = PoseStamped()
+        #     self.objective_step.header.frame_id = "odom"
+        #     self.objective_step.header.stamp = self.get_clock().now().to_msg()
 
-            self.objective_step.pose.position.x = self.C[0][-1]
-            self.objective_step.pose.position.y = self.C[1][-1]
+        #     self.objective_step.pose.position.x = self.C[0][-1]
+        #     self.objective_step.pose.position.y = self.C[1][-1]
 
-            self.objective_curve.poses.append(self.objective_step)
+        #     self.objective_curve.poses.append(self.objective_step)
 
     ###################################################################################################
     #Callback da Pose toda vez que é publicada.
@@ -202,10 +202,45 @@ class Turtlebot3_Navigator(Node):
         self.publisher_.publish(cmd_vel_pub)
 
 
+
+
+
+
+
+def nodes_to_path(nodes):
+    path = [[],[]]
+    for i in range(len(nodes) - 1):
+        path[0] = np.hstack((path[0] , np.linspace(nodes[i][0],nodes[i+1][0],5)))
+        path[1] = np.hstack((path[1] , np.linspace(nodes[i][1],nodes[i+1][1],5)))
+   
+    return path 
+
+
+
+
 def main(args=None):
+    path_nodes_str = ''
+    with open('path_a_star.txt', 'r') as reader:
+        path_nodes_str = path_nodes_str + reader.read()
+
+    path_nodes_str = path_nodes_str.split("\n")
+
+    path_nodes_str = [i.split(" ") for i in path_nodes_str[:-1]]
+
+    path_nodes_float = []
+    for i in path_nodes_str:
+        path_nodes_float.append([])
+        for o in i:
+            path_nodes_float[-1].append(float(o))
+
+
+    path = nodes_to_path(path_nodes_float)
+
+
+
     rclpy.init(args=args)
 
-    navigator = Turtlebot3_Navigator()
+    navigator = Turtlebot3_Navigator(path)
 
     rclpy.spin(navigator)
 

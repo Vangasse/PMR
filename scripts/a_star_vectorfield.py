@@ -310,6 +310,12 @@ def dict_to_graph(dicto,nodes):
 
 
 
+def nodes_to_path(nodes):
+    for i in range(len(nodes) - 1):
+        path[0] = np.hstack((path[0] , np.linspace(nodes[i][0],nodes[i+1][0],5)))
+        path[1] = np.hstack((path[1] , np.linspace(nodes[i][1],nodes[i+1][1],5)))
+   
+    return path 
 
 
 
@@ -321,8 +327,6 @@ def main(args=None):
     #####################
     ######## PATH #######
     #####################
-
-    nodes = ["o", "goal", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
 
     # Dictionary
     graph_input = {"o": [[7,44],["a","b","c"]], 
@@ -340,22 +344,20 @@ def main(args=None):
     "l": [[18,41],["f"]], 
     "goal": [[26.6,19.4],[]]}
 
+    nodes = graph_input.keys()
 
     G = nx.Graph()
 
     G = dict_to_graph(graph_input,nodes)
 
-    path0 = a_star(G, "o", "goal")
-    path_nodes = []
+    path_nodes = a_star(G, "o", "goal")
+    path_discrete = []
     path = [[]]*2
 
-    for i in path0:
-        path_nodes.append(graph_input[i][0])
+    for i in path_nodes:
+        path_discrete.append(graph_input[i][0])
 
-    for i in range(len(path_nodes) - 1):
-        path[0] = np.hstack((path[0] , np.linspace(path_nodes[i][0],path_nodes[i+1][0],5)))
-        path[1] = np.hstack((path[1] , np.linspace(path_nodes[i][1],path_nodes[i+1][1],5)))
-
+    path = nodes_to_path(path_discrete)
 
     #####################
     ###### PLOTING ######
