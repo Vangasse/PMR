@@ -205,14 +205,23 @@ class RRT():
 
         return img, path
 
+    def map2env(self, map_path, env_dim=(10,10)):
+        map_size = (self.map.shape[0], self.map.shape[1])
 
+        env_path = []
+        for i in map_path:
+            env_path.append((
+                (env_dim[0]/map_size[0])*i[0] - 5,
+                (env_dim[1]/map_size[1])*i[1] - 5
+            ))
 
+        return env_path
 
 def main():
     img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
 
-    start = (36, 18)
-    goal = (29, 38)
+    start = (25, 22)
+    goal = (8, 36)
 
     rrt = RRT(start, goal, img)
 
@@ -222,10 +231,12 @@ def main():
 
     img, path = rrt.buildTree(img)
 
-    print(path)
+    path = rrt.map2env(path)
     
     plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
     plt.show()
+
+    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/rrt_path.npy'), path)
 
     # for i in range(100):
     #     point = rrt.pickFreePoint()
