@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import heapq as hq
 import numpy as np
+import os
 
 #######################
 ###### FUNCTIONS ######
@@ -70,24 +71,38 @@ def discrete_to_continuos(nodes):
 ######## PATH #######
 #####################
 
-nodes = ["o", "goal", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
-
 # Dictionary
-graph_input = {"o": [[7,44],["a","b","c"]], 
-"a": [[12,40],["d","e","l"]], 
-"b": [[6,37],["g","h","i"]], 
-"c": [[15,45],["j","k","l"]], 
-"d": [[14,33.4],["goal"]], 
-"e": [[23,27],["goal"]], 
-"f": [[23.4,39],["goal"]], 
-"g": [[6,30],[]], 
-"h": [[8,32],["d"]], 
-"i": [[8,30],[]], 
-"j": [[22,43],["f"]], 
-"k": [[18,44],[]], 
-"l": [[18,41],["f"]], 
-"goal": [[26.6,19.4],[]]}
+graph_input = {"o": [[0,0],["a","b","c"]], 
+"a": [[-1,1],["d","e"]], 
+"b": [[1,0.5],["d","f"]], 
+"c": [[0,-1.5],[]], 
+"d": [[0.5,1.5],["e","g"]], 
+"e": [[-1,3],["g"]], 
+"f": [[3,0],["h"]], 
+"g": [[1.2,3.5],["i"]], 
+"h": [[4,-0.4],["j"]], 
+"i": [[3.1,4.2],["l","k"]], 
+"j": [[5,0.3],["k"]], 
+"k": [[5,2],["l"]], 
+"l": [[5.2,4.1],["goal"]], 
+"goal": [[5.8,3.9],[]]}
 
+# graph_input = {"o": [[7,44],["a","b","c"]], 
+# "a": [[12,40],["d","e","l"]], 
+# "b": [[6,37],["g","h","i"]], 
+# "c": [[15,45],["j","k","l"]], 
+# "d": [[14,33.4],["goal"]], 
+# "e": [[23,27],["goal"]], 
+# "f": [[23.4,39],["goal"]], 
+# "g": [[6,30],[]], 
+# "h": [[8,32],["d"]], 
+# "i": [[8,30],[]], 
+# "j": [[22,43],["f"]], 
+# "k": [[18,44],[]], 
+# "l": [[18,41],["f"]], 
+# "goal": [[26.6,19.4],[]]}
+
+nodes = graph_input.keys()
 
 G = nx.Graph()
 
@@ -95,18 +110,21 @@ G = dict_to_graph(graph_input,nodes)
 
 path_nodes = a_star(G, "o", "goal")
 path_discrete = []
-path = [[]]*2
+# path = [[]]*2
 
 for i in path_nodes:
     path_discrete.append(graph_input[i][0])
 
-path = discrete_to_continuos(path_discrete)
+# path = discrete_to_continuos(path_discrete)
 
 
-with open('path_a_star.txt', 'w') as f:
-    for line in path_discrete:
-        f.write(str(line[0])+" "+str(line[1]))
-        f.write('\n')
+np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'), path_discrete)
+
+
+# with open('path_a_star.txt', 'w') as f:
+#     for line in path_discrete:
+#         f.write(str(line[0])+" "+str(line[1]))
+#         f.write('\n')
 
 
 
