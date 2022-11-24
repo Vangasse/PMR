@@ -1,4 +1,5 @@
 import os
+import time
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -16,6 +17,7 @@ class RRT():
 
         self.G = nx.Graph()
         self.createRoot(self.start)
+        self.createRoot(self.goal)
         
 
     def plotMap(self):
@@ -96,11 +98,11 @@ class RRT():
         # plt.tight_layout()
         # plt.show()
 
-    def findCloser(self, point):
-        queue = [self.start]
+    def findCloser(self, root, point):
+        queue = [root]
         visited = []
         d_min = np.inf
-        closer = self.start
+        closer = root
 
         while queue:
             node = queue.pop(0)
@@ -182,27 +184,65 @@ class RRT():
 
     def buildTree(self, img):
         img[self.start[0],self.start[1]] = (0,0,1)
+        img[self.goal[0],self.goal[1]] = (1,0,0)
+
+        MONO = False
 
         while True:
 
-            point = self.pickPoint()
-
-            closer, dp = self.findCloser(point)
-
-            last_node = self.reach(closer, point, dp)
-
+            last_node = []
+            start_time = time.time()
+            while not last_node:
+                if time.time() - start_time > .05:
+                    break
+                point = self.pickPoint()
+                closer, dp = self.findCloser(self.start, point)
+                last_node = self.reach(closer, point, dp)
             if last_node:
-                if sp.spatial.distance.euclidean(last_node, self.goal) < 4:
-                    self.addNode(last_node, self.goal, sp.spatial.distance.euclidean(last_node, self.goal))
-                    img[self.goal[0],self.goal[1]] = (1,0,0)
+                closer, dp = self.findCloser(self.goal, last_node)
+                img[last_node[0],last_node[1]] = (0,1,0)
+                if dp < 4:
+                    # self.addNode(last_node, closer, dp)
                     break
 
-                img[last_node[0],last_node[1]] = (0,1,0)
 
-        path = [self.goal]
-        while not path[0] == self.start:
-            path.insert(0, self.G.nodes[path[0]]["antecessor"])
+            last_node = []
+            start_time = time.time()
+            while not last_node and not MONO:
+                if time.time() - start_time > .05:
+                    MONO = True
+                    break
+                point = self.pickPoint()
+                closer, dp = self.findCloser(self.goal, point)
+                last_node = self.reach(closer, point, dp)
+            if last_node and not MONO:
+                closer, dp = self.findCloser(self.start, last_node)
+                img[last_node[0],last_node[1]] = (1,0,1)
+                if dp < 4:
+                    # self.addNode(last_node, closer, dp)
+                    break
 
+
+        path_A = [last_node]
+        path_B = [closer]
+        while True:
+            path_A.append(self.G.nodes[path_A[-1]]["antecessor"])
+            if path_A[-1] == self.start:
+                path_A.reverse()
+                break
+            elif path_A[-1] == self.goal:
+                break
+        while True:
+            path_B.append(self.G.nodes[path_B[-1]]["antecessor"])
+            if path_B[-1] == self.start:
+                path_B.reverse()
+                path = np.concatenate((path_B, path_A), axis=0).tolist()
+                break
+            elif path_B[-1] == self.goal:
+                path = np.concatenate((path_A, path_B), axis=0).tolist()
+                break
+
+        # print(path)
         return img, path
 
     def map2env(self, map_path, env_dim=(10,10)):
@@ -218,22 +258,20 @@ class RRT():
         return env_path
 
 def main():
-    img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
+    samples = 1000
+    map = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
 
     start = (25, 22)
     goal = (42, 10)
 
-    rrt = RRT(start, goal, img)
-
-    img = np.stack((img,)*3, axis=-1)
-
-    # rrt.checkConnection(start, goal, img)
-
+    rrt = RRT(start, goal, map)
+    img = np.stack((map,)*3, axis=-1)
     img, path = rrt.buildTree(img)
-
     path = rrt.map2env(path)
     
-    plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
+    # print(path)
+    # plt.boxplot(t)
+    plt.imshow(img ,vmin=0,vmax=1),plt.title('Subsampled')
     plt.show()
 
     np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/path_RRT.npy'), path)
