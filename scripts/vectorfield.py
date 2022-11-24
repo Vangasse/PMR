@@ -229,12 +229,25 @@ def discrete_to_continuos(nodes):
 
 
 def main(args=None):
-    path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'))
+
+
+    flag_method = 1
+
+
+    if flag_method == 1:
+        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'))
+    elif flag_method == 2:
+        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_PRM.npy'))
+    elif flag_method == 3:
+        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_RRT.npy'))
+    else:
+        print("Invalid Method")    
+    
 
     path = discrete_to_continuos(path_discrete)
 
     plath_is_closed = False
-
+    
     rclpy.init(args=args)
 
     navigator = Turtlebot3_Navigator(path,plath_is_closed)

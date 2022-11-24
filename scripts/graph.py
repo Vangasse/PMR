@@ -108,7 +108,7 @@ G = nx.Graph()
 
 G = dict_to_graph(graph_input,nodes)
 
-path_nodes = a_star(G, "o", "goal")
+path_nodes = a_star(G, "o", "h")
 path_discrete = []
 # path = [[]]*2
 
