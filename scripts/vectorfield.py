@@ -34,7 +34,7 @@ from rclpy.qos import qos_profile_sensor_data
 
 class Turtlebot3_Navigator(Node):
 
-    def __init__(self,path,flag):
+    def __init__(self,path_discrete,flag):
         super().__init__('turtlebot3_navigator')
         qos = QoSProfile(depth=10)
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
@@ -66,14 +66,35 @@ class Turtlebot3_Navigator(Node):
 
         self.flag_closed_path = flag
         self.end_of_path = False
+        self.following_path = False
+        self.end_of_simulation = False
+        self.int_error = 0
+        self.der_error = 0
+        self.path = [[],[]]
 
         # Cria curva
         theta = np.arange(0, 2*np.pi, 0.01)
 
-        self.C = path
+        self.path_discrete = path_discrete
+        self.step = 0
 
-        R = 3
-        r = 1
+        vector_1 = [1,0]
+        vector_2 = [ self.path_discrete[self.step+1][0] - self.path_discrete[self.step][0] , self.path_discrete[self.step+1][1] - self.path_discrete[self.step][1] ]
+
+        print("MELECA0")
+        print(vector_2)
+
+        unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
+        unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
+        dot_product = np.dot(unit_vector_1, unit_vector_2)
+
+
+        cross_product = np.cross(vector_1,vector_2)
+        print(cross_product)
+        if cross_product > 0:
+            self.yaw_ref = np.arccos(dot_product)
+        else:
+            self.yaw_ref = -np.arccos(dot_product)
 
         # for theta1 in theta:
             
@@ -95,7 +116,7 @@ class Turtlebot3_Navigator(Node):
         self.update_state(msg)
         roll, pitch, self.yaw = self.euler_from_quaternion(self.orientation)
 
-        self.control(self.C, self.position, self.velocity, self.yaw, self.d, self.k, .03, 3)
+        self.control(self.position, self.velocity, self.yaw, self.d, self.k, .03, 3)
 
         self.publisher_trail.publish(self.trail)
         self.publisher_objective.publish(self.objective_curve)
@@ -140,6 +161,17 @@ class Turtlebot3_Navigator(Node):
         
             return roll_x, pitch_y, yaw_z # in radians
 
+
+    ###################################################################################################
+    # Find Continuous path between two nodes
+    def discrete_to_continuos(self, nodes):
+        path = [[],[]]
+        for i in range(len(nodes) - 1):
+            path[0] = list(np.hstack((path[0] , np.linspace(nodes[i][0],nodes[i+1][0],10))))
+            path[1] = list(np.hstack((path[1] , np.linspace(nodes[i][1],nodes[i+1][1],10))))
+
+        return path 
+
     ###################################################################################################
     # Encontra ponto mais próximo dentro do trajeto
     def closest_point(self, position, dx, dy, C):
@@ -160,6 +192,8 @@ class Turtlebot3_Navigator(Node):
         if not self.flag_closed_path:
             if j >= (len(C[1])-1):
                 self.end_of_path = True
+                if self.step == len(self.path_discrete) - 1:
+                    self.end_of_simulation = True
 
         if j == (len(C[1])-1):
             T = [C[0][0] - C[0][j] , C[1][0] - C[1][j]] # Caso especial
@@ -180,35 +214,108 @@ class Turtlebot3_Navigator(Node):
 
     ###################################################################################################
     # Lei de Controle
-    def control(self, C, position, velocity, orientation, d, k, dt, beta):
-
-        current_dx = velocity*dt*np.cos(orientation)
-        current_dy = velocity*dt*np.sin(orientation)
-        
-        [N, T, dmin] = self.closest_point(position, current_dx, current_dy, C)
-        dx, dy = self.vector_composition(N, T, beta, dmin)
-
-        sin = np.sin(orientation)
-        cos = np.cos(orientation)
-        v = cos*dx + sin*dy
-        w = (1/d)*(-sin*dx + cos*dy)
+    def control(self, position, velocity, orientation, d, k, dt, beta):
 
         cmd_vel_pub = Twist()
 
-        if self.end_of_path:
+        if self.end_of_simulation:
             v = 0.0
-            w = 0.0
+            w = 0.0 
+        
+        elif self.following_path:
+            self.int_error = 0
+            self.der_error = 0
 
-        if v < self.v_lim:
-            cmd_vel_pub.linear.x = v
-        else:
-            cmd_vel_pub.linear.x = self.v_lim
+            current_dx = velocity*dt*np.cos(orientation)
+            current_dy = velocity*dt*np.sin(orientation)
+            
+            [N, T, dmin] = self.closest_point(position, current_dx, current_dy, self.path)
+            dx, dy = self.vector_composition(N, T, beta, dmin)
+
+            sin = np.sin(orientation)
+            cos = np.cos(orientation)
+            v = cos*dx + sin*dy
+            w = (1/d)*(-sin*dx + cos*dy)
+
+
+            if self.end_of_path and self.following_path:
+                self.following_path = False
+                v = 0.0
+                w = 0.0
+
+                print("MELECAcritica")
+
+                # print(self.step)
+                # print(len(self.path_discrete))
+
+                if self.step == len(self.path_discrete) - 1:
+                    self.end_of_simulation = True
+                else:      
+                    vector_1 = [1,0]
+                    vector_2 = [ self.path_discrete[self.step+1][0] - self.path_discrete[self.step][0] , self.path_discrete[self.step+1][1] - self.path_discrete[self.step][1] ]
+
+                    print(vector_2)
+                    unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
+                    unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
+                    dot_product = np.dot(unit_vector_1, unit_vector_2)
+
+
+                    cross_product = np.cross(vector_1,vector_2)
+                    if cross_product > 0:
+                        self.yaw_ref = np.arccos(dot_product)
+                    else:
+                        self.yaw_ref = -np.arccos(dot_product)
+
+
+
+            if v < self.v_lim:
+                cmd_vel_pub.linear.x = v
+            else:
+                cmd_vel_pub.linear.x = self.v_lim
+            
+            if w < self.w_lim:
+                cmd_vel_pub.angular.z = w
+            else:
+                cmd_vel_pub.angular.z = self.w_lim
         
-        if w < self.w_lim:
-            cmd_vel_pub.angular.z = w
+
         else:
-            cmd_vel_pub.angular.z = self.w_lim
-        
+
+            cmd_vel_pub.linear.x = 0.0
+            
+            self.int_error += (self.yaw_ref - self.yaw)
+            error = (self.yaw_ref - self.yaw)
+
+            w = 0.1*error + 0.004*self.int_error - 10.0*(self.der_error - error)
+            # print("a")
+            # print(0.1*error + 0.004*self.int_error)
+            # print("b")
+            # print(-10.0*(self.der_error - error))
+
+            self.der_error = error
+            print(w)
+            print(f"REF: {self.yaw_ref}")
+            print(f"YAW: {self.yaw}")
+
+            if np.abs(self.yaw_ref - self.yaw) < 0.1:
+                self.following_path = True
+                self.end_of_path = False
+
+                self.path = self.discrete_to_continuos([self.path_discrete[self.step],self.path_discrete[self.step+1]])
+
+                self.step += 1
+
+
+            if w < self.w_lim:
+                cmd_vel_pub.angular.z = w
+            else:
+                cmd_vel_pub.angular.z = self.w_lim
+
+
+
+
+
+
         self.publisher_.publish(cmd_vel_pub)
 
 
@@ -217,13 +324,22 @@ class Turtlebot3_Navigator(Node):
 
 
 
-def discrete_to_continuos(nodes):
-    path = [[],[]]
-    for i in range(len(nodes) - 1):
-        path[0] = list(np.hstack((path[0] , np.linspace(nodes[i][0],nodes[i+1][0],10))))
-        path[1] = list(np.hstack((path[1] , np.linspace(nodes[i][1],nodes[i+1][1],10))))
 
-    return path 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -231,7 +347,7 @@ def discrete_to_continuos(nodes):
 def main(args=None):
 
 
-    flag_method = 1
+    flag_method = 3
 
 
     if flag_method == 1:
@@ -243,14 +359,11 @@ def main(args=None):
     else:
         print("Invalid Method")    
     
-
-    path = discrete_to_continuos(path_discrete)
-
     plath_is_closed = False
     
     rclpy.init(args=args)
 
-    navigator = Turtlebot3_Navigator(path,plath_is_closed)
+    navigator = Turtlebot3_Navigator(path_discrete,plath_is_closed)
 
     rclpy.spin(navigator)
 
