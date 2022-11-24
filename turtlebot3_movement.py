@@ -18,7 +18,9 @@ from dis import dis
 from distutils.log import debug
 import rclpy
 import numpy as np
+import scipy as sp
 import math
+import os
 
 from rclpy.node import Node
 
@@ -50,20 +52,31 @@ class Turtlebot3_Navigator(Node):
             qos)
 
         self.objective = Point()
-        goal = eval(sys.argv[1])
-        print(goal)
-        self.objective.x = float(goal[0])
-        self.objective.y = float(goal[1])
+        # goal = eval(sys.argv[1])
+        # print(goal)
+        # self.objective.x = float(goal[0])
+        # self.objective.y = float(goal[1])
+        self.path = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/path_RRT2.npy'))
+        self.objective.x = float(self.path[0,0])
+        self.objective.y = float(self.path[0,1])
 
         self.position = Point()
         self.orientation = Quaternion()
         self.Ts = .1
-        self.k = .1
+        self.k = .5
         self.d = .1
 
     def odom_callback(self, msg):
         self.update_pose(msg)
         roll, pitch, yaw = self.euler_from_quaternion(self.orientation)
+
+        if not self.path.size == 0:
+            if sp.spatial.distance.euclidean((self.position.x, self.position.y), (self.objective.x, self.objective.y)) < .2:
+                self.path = np.delete(self.path, 0, 0)
+                if not self.path.size == 0:
+                    self.objective.x = float(self.path[0][0])
+                    self.objective.y = float(self.path[0][1])
+
         self.control(self.objective, self.position, yaw, self.d, self.k)
 
     def update_pose(self, msg):

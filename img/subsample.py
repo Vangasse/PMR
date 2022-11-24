@@ -38,9 +38,9 @@ robot_diameter = .64
 pixel_size = map_size/len(croped)
 kernel_size = math.ceil(robot_diameter/pixel_size)
 kernel = np.ones((kernel_size,kernel_size), np.uint8)
-eroded = cv.erode(croped, kernel)
+final = cv.erode(croped, kernel)
 ## Rotação para sistema de coordenadas do Gazebo
-final = cv.rotate(eroded, cv.ROTATE_90_CLOCKWISE)
+# final = cv.rotate(eroded, cv.ROTATE_90_CLOCKWISE)
 
 subsampled = subsample(final, kernel=15)
 print(subsampled.shape)
