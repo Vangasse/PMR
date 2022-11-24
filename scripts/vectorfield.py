@@ -231,7 +231,7 @@ def discrete_to_continuos(nodes):
 def main(args=None):
 
 
-    flag_method = 1
+    flag_method = 3
 
 
     if flag_method == 1:
@@ -239,7 +239,7 @@ def main(args=None):
     elif flag_method == 2:
         path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_PRM.npy'))
     elif flag_method == 3:
-        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_RRT.npy'))
+        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../img/path_RRT2.npy'))
     else:
         print("Invalid Method")    
     
