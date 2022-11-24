@@ -221,7 +221,7 @@ def main():
     img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
 
     start = (25, 22)
-    goal = (8, 36)
+    goal = (42, 10)
 
     rrt = RRT(start, goal, img)
 
@@ -236,7 +236,7 @@ def main():
     plt.imshow(img,vmin=0,vmax=1),plt.title('Subsampled')
     plt.show()
 
-    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/rrt_path.npy'), path)
+    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/path_RRT.npy'), path)
 
     # for i in range(100):
     #     point = rrt.pickFreePoint()
