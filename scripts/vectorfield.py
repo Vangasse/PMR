@@ -81,8 +81,8 @@ class Turtlebot3_Navigator(Node):
         vector_1 = [1,0]
         vector_2 = [ self.path_discrete[self.step+1][0] - self.path_discrete[self.step][0] , self.path_discrete[self.step+1][1] - self.path_discrete[self.step][1] ]
 
-        print("MELECA0")
-        print(vector_2)
+        # print("MELECA0")
+        # print(vector_2)
 
         unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
         unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
@@ -90,7 +90,7 @@ class Turtlebot3_Navigator(Node):
 
 
         cross_product = np.cross(vector_1,vector_2)
-        print(cross_product)
+        # print(cross_product)
         if cross_product > 0:
             self.yaw_ref = np.arccos(dot_product)
         else:
@@ -243,7 +243,7 @@ class Turtlebot3_Navigator(Node):
                 v = 0.0
                 w = 0.0
 
-                print("MELECAcritica")
+                # print("MELECAcritica")
 
                 # print(self.step)
                 # print(len(self.path_discrete))
@@ -254,7 +254,6 @@ class Turtlebot3_Navigator(Node):
                     vector_1 = [1,0]
                     vector_2 = [ self.path_discrete[self.step+1][0] - self.path_discrete[self.step][0] , self.path_discrete[self.step+1][1] - self.path_discrete[self.step][1] ]
 
-                    print(vector_2)
                     unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
                     unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
                     dot_product = np.dot(unit_vector_1, unit_vector_2)
@@ -286,16 +285,16 @@ class Turtlebot3_Navigator(Node):
             self.int_error += (self.yaw_ref - self.yaw)
             error = (self.yaw_ref - self.yaw)
 
-            w = 0.1*error + 0.004*self.int_error - 10.0*(self.der_error - error)
+            w = 0.4*error + 0.01*self.int_error - 10.0*(self.der_error - error)
             # print("a")
             # print(0.1*error + 0.004*self.int_error)
             # print("b")
             # print(-10.0*(self.der_error - error))
 
             self.der_error = error
-            print(w)
-            print(f"REF: {self.yaw_ref}")
-            print(f"YAW: {self.yaw}")
+            # print(w)
+            # print(f"REF: {self.yaw_ref}")
+            # print(f"YAW: {self.yaw}")
 
             if np.abs(self.yaw_ref - self.yaw) < 0.1:
                 self.following_path = True
