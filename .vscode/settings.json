@@ -3,5 +3,10 @@
         "/home/gabriel/ros2_ws/install/attractive_repulsive_potential/lib/python3.8/site-packages",
         "/home/gabriel/ros2_ws/install/Attractive_Repulsive_Potential/lib/python3.8/site-packages",
         "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/gabriel/ros2_ws/install/attractive_repulsive_potential/lib/python3.8/site-packages",
+        "/home/gabriel/ros2_ws/install/Attractive_Repulsive_Potential/lib/python3.8/site-packages",
+        "/opt/ros/foxy/lib/python3.8/site-packages"
     ]
 }
