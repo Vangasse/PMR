@@ -9,7 +9,7 @@ import os
 #######################
 
 
-def a_star(G, start, goal):
+def a_star(G, start, goal, graph_input):
     visited = {}
     queue = [(0, start, start)]
 
@@ -17,18 +17,21 @@ def a_star(G, start, goal):
     while queue:
         node = hq.heappop(queue)
         
+        heuristica = get_distance(graph_input[node[1]][0],graph_input[goal][0])
+
         if node[1] in visited:
-            if node[0] < visited[node[1]][0]:
-                visited[node[1]] = (node[0], node[2])
+            if node[0] - heuristica < visited[node[1]][0]:
+                visited[node[1]] = (node[0] - heuristica, node[2])
             else:
                 pass
         else:
-            visited[node[1]] = (node[0], node[2])
+            visited[node[1]] = (node[0] - heuristica, node[2])
 
         neighbors = list(G[node[1]].keys())
         for n in neighbors:
             if not n in visited:
-                hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0], n, node[1]))
+                heuristica = get_distance(graph_input[n][0],graph_input[goal][0])
+                hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0] + heuristica, n, node[1]))
 
     res = [goal]
 
@@ -126,7 +129,7 @@ G = nx.Graph()
 
 G = dict_to_graph(graph_input,nodes)
 
-path_nodes = a_star(G, "start", "goal")
+path_nodes = a_star(G, "start", "o",graph_input)
 path_discrete = []
 # path = [[]]*2
 
@@ -149,7 +152,6 @@ np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.np
 #####################
 ###### PLOTING ######
 #####################
-
 
 
 elarge = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] > 0.5]
