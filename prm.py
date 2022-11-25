@@ -3,6 +3,7 @@ from scipy.spatial import KDTree
 import numpy as np
 from matplotlib import pyplot as plt
 import networkx as nx
+import heapq as hq
 
 class PRM():
 
@@ -16,8 +17,8 @@ class PRM():
         self.roadmap = self.createPoints(n)
         self.kd_tree = KDTree(self.roadmap)      
         self.createGraph()
-        # print(list(self.G.nodes))
-        # print(list(self.G.edges))        
+        print(list(self.G.nodes))
+        print(list(self.G.edges))        
         
 
     # Método usado para criar o roadmap com n pontos
@@ -25,7 +26,7 @@ class PRM():
         points = np.empty((0,2))
         i = 0
         #ones=np.array([1,1,1])
-        po = np.array([[10,10],[40,40],[20,10],[20,45],[30,30],[25,20],[47,30],[47,20],[5,14]])
+        po = np.array([[10,10],[40,40],[20,10],[20,45],[30,30],[25,20],[25,15],[47,30],[47,20],[5,14],[30,40]])
  
         #while i < n:
         while i < po.shape[0]:
@@ -51,7 +52,8 @@ class PRM():
     def createGraph(self):
    
         i = 0
-        while i < 1:#self.roadmap.shape[0]:
+        while i < self.roadmap.shape[0]:
+            
             point = self.roadmap[i]
             distance,points = self.nearestNeighbors(point)
             
@@ -79,11 +81,18 @@ class PRM():
         y = y.reshape(len(y), 1)
         line = np.concatenate((x,y), axis=1)
 
+        l1 = []
+        l2 = []
         for point in line:
             
             if np.array_equal(self.map[int(point[0]), int(point[1])], self.zero):
                 return 0
+            
+            l1.append(int(point[0]))
+            l2.append(int(point[1]))
 
+        for i in range(len(l1)):
+            self.map[int(l1[i]), int(l2[i])] = (255,127,0)
         return 1
     
     def addStartOrGoal(self, point, i):
@@ -103,6 +112,48 @@ class PRM():
             print('Posição do start está colidindo com obstáculo') if i == 1 else print('Posição do goal está colidindo com obstáculo')
             return 0
 
+def a_star_PRM(G, start, goal):
+    visited = {}
+    queue = [(get_distance(start,goal), start, start)]
+
+    hq.heapify(queue)
+    while queue:
+        node = hq.heappop(queue)
+        
+        if goal in visited and visited[goal][0] < node[0]:
+            break
+        
+        heuristica = get_distance(start,goal)
+
+        if node[1] in visited:
+            if node[0] - heuristica < visited[node[1]][0]:
+                visited[node[1]] = (node[0] - heuristica, node[2])
+            else:
+                pass
+        else:
+            visited[node[1]] = (node[0] - heuristica, node[2])
+
+        neighbors = list(G[node[1]].keys())
+
+        for n in neighbors:
+            if not n in visited:
+                heuristica = get_distance(start,goal)
+                hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0] + heuristica, n, node[1]))
+
+    res = [goal]
+
+    searcher = goal
+
+    while searcher != start:
+        res.append(visited.get(searcher)[1])
+        searcher = visited.get(searcher)[1]
+
+    res.reverse()
+
+    return res
+
+def get_distance(a,b):
+    return np.sqrt((a[0]- b[0])**2 + (a[1]- b[1])**2)
 
 def main():
 
@@ -112,10 +163,28 @@ def main():
     start = np.array([40,10])
     goal = np.array([8, 36])
 
+    
+
     prm = PRM(img, 100) # Definindo tamanho do espaço e número de nós
     
     prm.addStartOrGoal(start,1)
     prm.addStartOrGoal(goal,2)
+
+    
+    pathNodes = a_star_PRM(prm.G, (40,10), (8,36))
+    pathDiscrete = []
+
+    for i in pathNodes:
+        pathDiscrete.append(list(i))
+
+
+    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'), pathDiscrete)
+
+
+
+
+    # prm.map[40,10] = (0,255,0) 
+    # prm.map[8,36] = (255,0,0) 
 
 
     plt.imshow(img,vmin=0,vmax=1)
