@@ -9,6 +9,46 @@ import os
 #######################
 
 
+def a_star_PRM(G, start, goal):
+    visited = {}
+    queue = [(get_distance(start,goal), start, start)]
+
+    hq.heapify(queue)
+    while queue:
+        node = hq.heappop(queue)
+        
+        if goal in visited and visited[goal][0] < node[0]:
+            break
+        
+        heuristica = get_distance(start,goal)
+
+        if node[1] in visited:
+            if node[0] - heuristica < visited[node[1]][0]:
+                visited[node[1]] = (node[0] - heuristica, node[2])
+            else:
+                pass
+        else:
+            visited[node[1]] = (node[0] - heuristica, node[2])
+
+        neighbors = list(G[node[1]].keys())
+
+        for n in neighbors:
+            if not n in visited:
+                heuristica = get_distance(start,goal)
+                hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0] + heuristica, n, node[1]))
+
+    res = [goal]
+
+    searcher = goal
+
+    while searcher != start:
+        res.append(visited.get(searcher)[1])
+        searcher = visited.get(searcher)[1]
+
+    res.reverse()
+
+    return res
+
 def a_star(G, start, goal, graph_input):
     visited = {}
     queue = [(get_distance(graph_input[start][0],graph_input[goal][0]), start, start)]
@@ -16,7 +56,6 @@ def a_star(G, start, goal, graph_input):
     hq.heapify(queue)
     while queue:
         node = hq.heappop(queue)
-        
         
         if goal in visited and visited[goal][0] < node[0]:
             break
