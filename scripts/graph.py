@@ -11,11 +11,15 @@ import os
 
 def a_star(G, start, goal, graph_input):
     visited = {}
-    queue = [(0, start, start)]
+    queue = [(get_distance(graph_input[start][0],graph_input[goal][0]), start, start)]
 
     hq.heapify(queue)
     while queue:
         node = hq.heappop(queue)
+        
+        
+        if goal in visited and visited[goal][0] < node[0]:
+            break
         
         heuristica = get_distance(graph_input[node[1]][0],graph_input[goal][0])
 
@@ -28,6 +32,7 @@ def a_star(G, start, goal, graph_input):
             visited[node[1]] = (node[0] - heuristica, node[2])
 
         neighbors = list(G[node[1]].keys())
+
         for n in neighbors:
             if not n in visited:
                 heuristica = get_distance(graph_input[n][0],graph_input[goal][0])
@@ -129,23 +134,15 @@ G = nx.Graph()
 
 G = dict_to_graph(graph_input,nodes)
 
-path_nodes = a_star(G, "start", "o",graph_input)
+path_nodes = a_star(G, "start", "goal",graph_input)
 path_discrete = []
 # path = [[]]*2
 
 for i in path_nodes:
     path_discrete.append(graph_input[i][0])
 
-# path = discrete_to_continuos(path_discrete)
-
 
 np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'), path_discrete)
-
-
-# with open('path_a_star.txt', 'w') as f:
-#     for line in path_discrete:
-#         f.write(str(line[0])+" "+str(line[1]))
-#         f.write('\n')
 
 
 
