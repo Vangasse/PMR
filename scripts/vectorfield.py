@@ -275,7 +275,7 @@ class Turtlebot3_Navigator(Node):
 
             cmd_vel_pub.linear.x = 0.0
             
-            if self.yaw_ref*self.yaw < 0 and (abs(self.yaw) + abs(self.yaw_ref)):
+            if self.yaw_ref*self.yaw < 0 and (abs(self.yaw) + abs(self.yaw_ref)) > np.pi:
                 if self.yaw > 0:
                     error = 2*np.pi - (self.yaw_ref - self.yaw)
                 else:

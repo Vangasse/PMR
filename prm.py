@@ -59,7 +59,8 @@ class PRM():
             
             for n in range(1, distance.shape[0]):                
                 if self.checkConnection(points[0],points[n]):
-                    self.addNode((points[0][0],points[0][1]),(points[n][0],points[n][1]),distance[n])         
+                    self.addNode((points[0][0],points[0][1]),(points[n][0],points[n][1]),distance[n])     
+                    # print((points[0][0],points[0][1]))   
             i+=1
 
     def addNode(self, node1, node2, d):
@@ -133,6 +134,10 @@ def a_star_PRM(G, start, goal):
         else:
             visited[node[1]] = (node[0] - heuristica, node[2])
 
+        # print(node[1])
+        # print(type(node[1]))
+        # print(G[node[1]])
+
         neighbors = list(G[node[1]].keys())
 
         for n in neighbors:
@@ -160,27 +165,68 @@ def main():
     img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
     img = np.stack((img,)*3, axis=-1)
   
-    start = np.array([40,10])
-    goal = np.array([8, 36])
+    start = np.array([40.0,10.0])
+    goal = np.array([8.0, 36.0])
 
     
 
     prm = PRM(img, 100) # Definindo tamanho do espaço e número de nós
     
-    prm.addStartOrGoal(start,1)
-    prm.addStartOrGoal(goal,2)
+    # prm.addStartOrGoal(start,1)
+    # prm.addStartOrGoal(goal,2)
 
-    
-    pathNodes = a_star_PRM(prm.G, (40,10), (8,36))
+
+    # print(list(self.G.nodes))
+    # print(list(self.G.edges)) 
+
+    pathNodes = a_star_PRM(prm.G, (40.0,40.0), (25.0,20.0))
     pathDiscrete = []
 
     for i in pathNodes:
         pathDiscrete.append(list(i))
 
 
-    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'), pathDiscrete)
+    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/path_PRM.npy'), pathDiscrete)
 
 
+    #####################
+    ###### PLOTING ######
+    #####################
+
+
+    elarge = [(u, v) for (u, v, d) in prm.G.edges(data=True) if d["weight"] > 0.5]
+    esmall = [(u, v) for (u, v, d) in prm.G.edges(data=True) if d["weight"] <= 0.5]
+
+    pos = nx.spring_layout(prm.G, seed=7)  # positions for all nodes - seed for reproducibility
+
+    nodes_color = []
+
+    for node in prm.G:
+        if node in pathNodes:
+            nodes_color.append('tab:green')
+        else:
+            nodes_color.append('tab:blue')
+
+
+    # nodes
+    nx.draw_networkx_nodes(prm.G, pos, node_color= nodes_color, node_size=700)
+
+    # edges
+    nx.draw_networkx_edges(prm.G, pos, edgelist=elarge, width=6)
+    nx.draw_networkx_edges(
+        prm.G, pos, edgelist=esmall, width=6, alpha=0.5, edge_color="k", style="dashed"
+    )
+    # node labels
+    nx.draw_networkx_labels(prm.G, pos, font_size=20, font_family="sans-serif")
+    # edge weight labels
+    edge_labels = nx.get_edge_attributes(prm.G, "weight")
+    nx.draw_networkx_edge_labels(prm.G, pos, edge_labels)
+
+    ax = plt.gca()
+    ax.margins(0.08)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
 
 
     # prm.map[40,10] = (0,255,0) 
