@@ -20,7 +20,7 @@ def a_star_PRM(G, start, goal):
         if goal in visited and visited[goal][0] < node[0]:
             break
         
-        heuristica = get_distance(start,goal)
+        heuristica = get_distance(node[1],goal)
 
         if node[1] in visited:
             if node[0] - heuristica < visited[node[1]][0]:
@@ -34,7 +34,7 @@ def a_star_PRM(G, start, goal):
 
         for n in neighbors:
             if not n in visited:
-                heuristica = get_distance(start,goal)
+                heuristica = get_distance(n,goal)
                 hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0] + heuristica, n, node[1]))
 
     res = [goal]
