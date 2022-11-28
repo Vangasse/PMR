@@ -8,7 +8,7 @@ import heapq as hq
 class PRM():
 
     def __init__(self, img, n):
-        
+        self.im = 0
         self.k = 6                                      # Número de vizinhos próximos
         self.zero = np.zeros(3,dtype=int)
         self.one = np.ones(3,dtype=int)
@@ -17,16 +17,16 @@ class PRM():
         self.roadmap = self.createPoints(n)
         self.kd_tree = KDTree(self.roadmap)      
         self.createGraph()
-        print(list(self.G.nodes))
-        print(list(self.G.edges))        
+        # print(list(self.G.nodes))
+        # print(list(self.G.edges))        
         
 
     # Método usado para criar o roadmap com n pontos
     def createPoints(self, n):
         points = np.empty((0,2))
         i = 0
-        #ones=np.array([1,1,1])
-        po = np.array([[10,10],[40,40],[20,10],[20,45],[30,30],[25,20],[25,15],[47,30],[47,20],[5,14],[30,40]])
+      
+        po = np.array([[10,10],[40,40],[20,10],[25,8],[30,5],[20,45],[22,45],[30,30],[25,20],[25,15],[47,30],[47,20],[5,14],[30,40]])
  
         #while i < n:
         while i < po.shape[0]:
@@ -62,6 +62,7 @@ class PRM():
                     self.addNode((points[0][0],points[0][1]),(points[n][0],points[n][1]),distance[n])     
                     # print((points[0][0],points[0][1]))   
             i+=1
+        self.im = self.map
 
     def addNode(self, node1, node2, d):
         self.G.add_edge(node1, node2, weight = d)
@@ -93,7 +94,7 @@ class PRM():
             l2.append(int(point[1]))
 
         for i in range(len(l1)):
-            self.map[int(l1[i]), int(l2[i])] = (255,127,0)
+            pass#self.map[int(l1[i]), int(l2[i])] = (255,127,0)
         return 1
     
     def addStartOrGoal(self, point, i):
@@ -103,7 +104,7 @@ class PRM():
             
             for n in range(distance.shape[0]-1):              
                 if self.checkConnection(point, points[n]):
-                    self.addNode((points[0][0],points[0][1]),(points[n][0],points[n][1]),distance[n])                      
+                    self.addNode((point[0],point[1]),(points[n][0],points[n][1]),distance[n])                      
                     self.map[point[0],point[1]] = (0,255,0) if i == 1 else (255,0,0)                      
                     print('start foi conectado ao grafo') if i == 1 else print('goal foi conectado ao grafo') 
                     return 1
@@ -132,7 +133,10 @@ def a_star_PRM(G, start, goal):
             else:
                 pass
         else:
+            # print(node[0])
+            # print(node[2])
             visited[node[1]] = (node[0] - heuristica, node[2])
+            # print(visited[node[1]])
 
         # print(node[1])
         # print(type(node[1]))
@@ -143,48 +147,71 @@ def a_star_PRM(G, start, goal):
         for n in neighbors:
             if not n in visited:
                 heuristica = get_distance(start,goal)
+                # print(heuristica)
                 hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0] + heuristica, n, node[1]))
 
-    res = [goal]
+    res = [list(goal)]
 
     searcher = goal
-
+    print(visited)
+    print(searcher)
+    print(visited.get(searcher))
+    
     while searcher != start:
-        res.append(visited.get(searcher)[1])
+        res.append(list(visited.get(searcher)[1]))
         searcher = visited.get(searcher)[1]
 
     res.reverse()
-
+    # print(res)
     return res
 
 def get_distance(a,b):
     return np.sqrt((a[0]- b[0])**2 + (a[1]- b[1])**2)
 
+def map2env(map_path, env_dim=(10,10)):
+    map_size = (53, 53)
+
+    env_path = []
+    for i in map_path:
+        # print(i)
+        env_path.append((
+            ((env_dim[0]/map_size[0])*i[0] - 5),
+            ((env_dim[1]/map_size[1])*i[1] - 5)
+        ))
+    return env_path
+
 def main():
 
     img = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/subsampled.npy'))
     img = np.stack((img,)*3, axis=-1)
-  
-    start = np.array([40.0,10.0])
-    goal = np.array([8.0, 36.0])
+
+    start = np.array([40,10]) #np.array([27,25])
+    goal = np.array([8, 36]) #np.array([26, 45])
 
     
 
-    prm = PRM(img, 100) # Definindo tamanho do espaço e número de nós
+    prm = PRM(img, 150) # Definindo tamanho do espaço e número de nós
     
     # prm.addStartOrGoal(start,1)
     # prm.addStartOrGoal(goal,2)
 
+    # prm.map[40,10] = (0,255,0) 
+    # prm.map[8,36] = (255,0,0) 
 
-    # print(list(self.G.nodes))
-    # print(list(self.G.edges)) 
+    # print(list(prm.G.nodes))
 
-    pathNodes = a_star_PRM(prm.G, (40.0,40.0), (25.0,20.0))
+    # plt.imshow(img,vmin=0,vmax=1)
+    # plt.show() 
+    """
+
+    pathNodes = a_star_PRM(prm.G, (27,25), (26,45)) #np.array([26, 45]) #np.array([8, 36])
     pathDiscrete = []
 
     for i in pathNodes:
-        pathDiscrete.append(list(i))
+        pathDiscrete.append([i[0],i[1]])
 
+    pathDiscrete = map2env(pathDiscrete)
+    print(pathDiscrete)
 
     np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img/path_PRM.npy'), pathDiscrete)
 
@@ -232,9 +259,14 @@ def main():
     # prm.map[40,10] = (0,255,0) 
     # prm.map[8,36] = (255,0,0) 
 
-
+    """
     plt.imshow(img,vmin=0,vmax=1)
     plt.show() 
+
+
+
+ 
+
     
 
 if __name__ == '__main__':
