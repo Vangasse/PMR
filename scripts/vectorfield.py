@@ -307,14 +307,12 @@ class Turtlebot3_Navigator(Node):
 
 def main(args=None):
 
-
     flag_method = 1
-
 
     if flag_method == 1:
         path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_a_star.npy'))
     elif flag_method == 2:
-        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'path_PRM.npy'))
+        path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../img/path_PRM.npy'))
     elif flag_method == 3:
         path_discrete = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../img/path_RRT2.npy'))
     else:
