@@ -297,43 +297,12 @@ class Turtlebot3_Navigator(Node):
 
                 self.step += 1
 
-
             if w < self.w_lim:
                 cmd_vel_pub.angular.z = w
             else:
                 cmd_vel_pub.angular.z = self.w_lim
 
-
-
-
-
-
         self.publisher_.publish(cmd_vel_pub)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def main(args=None):
