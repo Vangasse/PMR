@@ -107,7 +107,19 @@ And then you can run:
 
 `python3 PMR_ws/src/PMR/wavefront.py`
 
-## Rapdly-exploring Random Trees
+## Probabilistic Roadmaps
+
+To run PRM, the path is already computed in `img/path_PRM.npy`, so all you need to change line 311 from `PMR_ws/src/PMR/scripts/vectorfield.py` to:
+
+`flag_method = 2`
+
+and then run:
+
+`ros2 launch turtlebot3_gazebo turtlebot3_islands.launch.py`
+
+`python3 PMR_ws/src/PMR/scripts/vectorfield.py`
+
+## Rapidly-exploring Random Trees
 
 To run RRT, the path is already computed in `img/path_RRT.npy`, so all you need to do is run:
 
