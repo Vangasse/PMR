@@ -107,9 +107,25 @@ And then you can run:
 
 `python3 PMR_ws/src/PMR/wavefront.py`
 
+## A*
+
+For a demonstration run:
+
+`python3 PMR_ws/src/PMR/scripts/graph.py`
+
+To run simulation of the path of demonstration, change line 310 from `PMR_ws/src/PMR/scripts/vectorfield.py` to:
+
+`flag_method = 1`
+
+and then run:
+
+`ros2 launch turtlebot3_gazebo turtlebot3_islands.launch.py`
+
+`python3 PMR_ws/src/PMR/scripts/vectorfield.py`
+
 ## Probabilistic Roadmaps
 
-To run PRM, the path is already computed in `img/path_PRM.npy`, so all you need to change line 311 from `PMR_ws/src/PMR/scripts/vectorfield.py` to:
+To run PRM, the path is already computed in `img/path_PRM.npy`, so all you need to change line 310 from `PMR_ws/src/PMR/scripts/vectorfield.py` to:
 
 `flag_method = 2`
 
