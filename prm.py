@@ -16,9 +16,7 @@ class PRM():
         self.G = nx.Graph()
         self.roadmap = self.createPoints(n)
         self.kd_tree = KDTree(self.roadmap)      
-        self.createGraph()
-        # print(list(self.G.nodes))
-        # print(list(self.G.edges))        
+        self.createGraph()   
         
 
     # Método usado para criar o roadmap com n pontos
@@ -26,21 +24,22 @@ class PRM():
         points = np.empty((0,2))
         i = 0
       
-        po = np.array([[10,10],[40,40],[20,10],[25,8],[30,5],[20,45],[22,45],[30,30],[25,20],[25,15],[47,30],[47,20],[5,14],[30,40]])
+        #po = np.array([[10,10],[40,40],[20,10],[25,8],[30,5],[20,45],[22,45],[30,30],[25,20],[25,15],[47,30],[47,20],[5,14],[30,40]])
  
-        #while i < n:
-        while i < po.shape[0]:
+        while i < n:
+        #while i < po.shape[0]:
             # Gera posições aleatórias (x,y) com base na dimensão do mapa
-            #p = np.random.randint(low=[0,0], high=[self.map.shape[0],self.map.shape[1]])
-            p = po[i]
+            p = np.random.randint(low=[0,0], high=[self.map.shape[0],self.map.shape[1]])
+            #p = po[i]
          
             if self.checkFreePoint(p):
                 points = np.append(points, np.array([p]), axis=0)
-                self.map[p[0],p[1]] = (0,0,255)
+                #self.map[p[0],p[1]] = (0,0,255) # descomentar para visualização
                 i+=1
         
         return points
     
+    # Método usado para verificar se existe colisão do ponto com algum obstáculo 
     def checkFreePoint(self,p):
         return np.array_equal(self.map[p[0],p[1]],self.one)
     
@@ -49,6 +48,7 @@ class PRM():
         dist, id = self.kd_tree.query(point, k=range(1,1+self.k))
         return np.transpose(dist), self.roadmap[id]
     
+    # Método usado para criar o grafo
     def createGraph(self):
    
         i = 0
@@ -64,12 +64,13 @@ class PRM():
             i+=1
         self.im = self.map
 
+    # Método usado para adicionar nós no grafo e suas arestas
     def addNode(self, node1, node2, d):
         self.G.add_edge(node1, node2, weight = d)
     
+    # Método usado para verificar se existe conexão entre dois pontos por uma linha reta
     def checkConnection(self, start, goal, resolution=.25):
 
-        # Notei o problema em que, se escolhida uma dimensão de referência, caso goal e starte estivessem alinhados, não se criava linha.
         numx = int(abs(start[0] - goal[0])/resolution)
         numy = int(abs(start[1] - goal[1])/resolution)
         if numx > numy:
@@ -83,20 +84,21 @@ class PRM():
         y = y.reshape(len(y), 1)
         line = np.concatenate((x,y), axis=1)
 
-        l1 = []
-        l2 = []
+        # l1 = []
+        # l2 = []
         for point in line:
             
             if np.array_equal(self.map[int(point[0]), int(point[1])], self.zero):
                 return 0
             
-            l1.append(int(point[0]))
-            l2.append(int(point[1]))
+        #     l1.append(int(point[0]))
+        #     l2.append(int(point[1]))
 
-        for i in range(len(l1)):
-            pass#self.map[int(l1[i]), int(l2[i])] = (255,127,0)
+        # for i in range(len(l1)):
+        #     self.map[int(l1[i]), int(l2[i])] = (255,127,0)
         return 1
     
+    # Método usado para adicionar o ponto inicial e final ao grafo
     def addStartOrGoal(self, point, i):
         
         if self.checkFreePoint(point):
@@ -114,6 +116,7 @@ class PRM():
             print('Posição do start está colidindo com obstáculo') if i == 1 else print('Posição do goal está colidindo com obstáculo')
             return 0
 
+# Método usado para encontrar um caminho no grafo entre a posição inicial e final
 def a_star_PRM(G, start, goal):
     visited = {}
     queue = [(get_distance(start,goal), start, start)]
@@ -133,36 +136,24 @@ def a_star_PRM(G, start, goal):
             else:
                 pass
         else:
-            # print(node[0])
-            # print(node[2])
             visited[node[1]] = (node[0] - heuristica, node[2])
-            # print(visited[node[1]])
-
-        # print(node[1])
-        # print(type(node[1]))
-        # print(G[node[1]])
 
         neighbors = list(G[node[1]].keys())
 
         for n in neighbors:
             if not n in visited:
                 heuristica = get_distance(start,goal)
-                # print(heuristica)
                 hq.heappush(queue, (G[node[1]][n]['weight'] + visited[node[1]][0] + heuristica, n, node[1]))
 
     res = [list(goal)]
 
     searcher = goal
-    print(visited)
-    print(searcher)
-    print(visited.get(searcher))
     
     while searcher != start:
         res.append(list(visited.get(searcher)[1]))
         searcher = visited.get(searcher)[1]
 
     res.reverse()
-    # print(res)
     return res
 
 def get_distance(a,b):
@@ -173,7 +164,6 @@ def map2env(map_path, env_dim=(10,10)):
 
     env_path = []
     for i in map_path:
-        # print(i)
         env_path.append((
             ((env_dim[0]/map_size[0])*i[0] - 5),
             ((env_dim[1]/map_size[1])*i[1] - 5)
@@ -188,12 +178,10 @@ def main():
     start = np.array([40,10]) #np.array([27,25])
     goal = np.array([8, 36]) #np.array([26, 45])
 
-    
-
     prm = PRM(img, 150) # Definindo tamanho do espaço e número de nós
     
-    # prm.addStartOrGoal(start,1)
-    # prm.addStartOrGoal(goal,2)
+    prm.addStartOrGoal(start,1)
+    prm.addStartOrGoal(goal,2)
 
     # prm.map[40,10] = (0,255,0) 
     # prm.map[8,36] = (255,0,0) 
@@ -202,9 +190,9 @@ def main():
 
     # plt.imshow(img,vmin=0,vmax=1)
     # plt.show() 
-    """
+    
 
-    pathNodes = a_star_PRM(prm.G, (27,25), (26,45)) #np.array([26, 45]) #np.array([8, 36])
+    pathNodes = a_star_PRM(prm.G, (start[0],start[1]), (goal[0],goal[1])) #np.array([26, 45]) #np.array([8, 36])
     pathDiscrete = []
 
     for i in pathNodes:
@@ -255,19 +243,9 @@ def main():
     plt.tight_layout()
     plt.show()
 
-
-    # prm.map[40,10] = (0,255,0) 
-    # prm.map[8,36] = (255,0,0) 
-
-    """
     plt.imshow(img,vmin=0,vmax=1)
     plt.show() 
 
-
-
- 
-
-    
 
 if __name__ == '__main__':
     main()
